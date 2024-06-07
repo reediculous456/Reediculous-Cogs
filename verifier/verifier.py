@@ -110,6 +110,19 @@ class Verifier(commands.Cog):
         await ctx.send("Question added.")
 
     @verifyset.command()
+    async def removequestion(self, ctx, index: int = None):
+        """Remove a question from the onboarding quiz by its index."""
+        if index is None:
+            await ctx.send_help('verifyset removequestion')
+            return
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if 0 < index <= len(questions):
+                removed_question = questions.pop(index - 1)
+                await ctx.send(f"Removed question: {removed_question['question']}")
+            else:
+                await ctx.send("Invalid question index.")
+
+    @verifyset.command()
     async def listquestions(self, ctx):
         """List all onboarding questions."""
         questions = await self.config.guild(ctx.guild).questions()
@@ -117,7 +130,7 @@ class Verifier(commands.Cog):
             await ctx.send("No onboarding questions set.")
             return
 
-        question_list = "\n".join([f"Q: {q['question']} A: {q['answer']}" for q in questions])
+        question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {q['answer']}" for i, q in enumerate(questions)])
         await ctx.send(f"Onboarding Questions:\n{question_list}")
 
     @verifyset.command()

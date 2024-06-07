@@ -23,6 +23,22 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 [p]load verifier
 ```
 
+## Commands
+
+### User Command
+
+- `[p]verify`: Manually triggers the verification process if the user is not already verified.
+
+### Admin Commands
+
+- `[p]verifyset`: Parent command for all verification settings.
+- `[p]verifyset setonboardrole @RoleName`: Sets the role to be granted upon correct answers.
+- `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
+- `[p]verifyset removequestion <index>`: Removes a question from the verification quiz by its index.
+- `[p]verifyset listquestions`: Lists all verification questions.
+- `[p]verifyset enabled true/false`: Enables or disables the verification process.
+- `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
+
 ## Usage
 
 ### Load the Cog
@@ -55,6 +71,16 @@ Add questions to the verification process:
 
 Replace the question and answer with your desired verification question and correct answer.
 
+### Removing Verification Questions
+
+Remove a question from the verification process by its index:
+
+```;
+[p]verifyset removequestion 1
+```
+
+Replace `1` with the index of the question you want to remove.
+
 ### Listing Verification Questions
 
 List all configured verification questions:
@@ -72,21 +98,6 @@ Users can manually trigger the verification process using the following command:
 ```
 
 This command will only work if the user is not already verified.
-
-## Commands
-
-### User Command
-
-- `[p]verify`: Manually triggers the verification process if the user is not already verified.
-
-### Admin Commands
-
-- `[p]verifyset`: Parent command for all verification settings.
-- `[p]verifyset setonboardrole @RoleName`: Sets the role to be granted upon correct answers.
-- `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
-- `[p]verifyset listquestions`: Lists all verification questions.
-- `[p]verifyset enabled true/false`: Enables or disables the verification process.
-- `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 
 ## Example Configuration
 
