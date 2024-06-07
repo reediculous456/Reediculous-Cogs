@@ -32,7 +32,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 ### Admin Commands
 
 - `[p]verifyset`: Parent command for all verification settings.
-- `[p]verifyset setonboardrole @RoleName`: Sets the role to be granted upon correct answers.
+- `[p]verifyset setverifiedrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset removequestion <index>`: Removes a question from the verification quiz by its index.
 - `[p]verifyset listquestions`: Lists all verification questions.
@@ -56,7 +56,7 @@ Replace `[p]` with your bot's command prefix.
 Set the role that will be granted upon successful verification:
 
 ```;
-[p]verifyset setonboardrole @RoleName
+[p]verifyset setverifiedrole @RoleName
 ```
 
 Replace `@RoleName` with the actual role you want to assign.
@@ -104,7 +104,7 @@ This command will only work if the user is not already verified.
 1. **Set the Verification Role**:
 
    ```;
-   [p]verifyset setonboardrole @Verified
+   [p]verifyset setverifiedrole @Verified
    ```
 
 2. **Add Questions**:

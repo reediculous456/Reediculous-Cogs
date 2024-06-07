@@ -91,17 +91,17 @@ class Verifier(commands.Cog):
         return
 
     @verifyset.command()
-    async def setonboardrole(self, ctx, role: discord.Role):
+    async def setverifiedrole(self, ctx, role: discord.Role):
         """Set the role to be granted upon correct answers."""
         if role is None:
-            await ctx.send_help('verifyset setonboardrole')
+            await ctx.send_help('verifyset setverifiedrole')
             return
         await self.config.guild(ctx.guild).role_id.set(role.id)
-        await ctx.send(f"The onboarding role has been set to {role.name}.")
+        await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
     async def addquestion(self, ctx, question: str, answer: str):
-        """Add a question to the onboarding quiz."""
+        """Add a question to the verification quiz."""
         if question is None or answer is None:
             await ctx.send_help('verifyset addquestion')
             return
@@ -111,7 +111,7 @@ class Verifier(commands.Cog):
 
     @verifyset.command()
     async def removequestion(self, ctx, index: int = None):
-        """Remove a question from the onboarding quiz by its index."""
+        """Remove a question from the verification quiz by its index."""
         if index is None:
             await ctx.send_help('verifyset removequestion')
             return
@@ -124,14 +124,14 @@ class Verifier(commands.Cog):
 
     @verifyset.command()
     async def listquestions(self, ctx):
-        """List all onboarding questions."""
+        """List all verification questions."""
         questions = await self.config.guild(ctx.guild).questions()
         if not questions:
-            await ctx.send("No onboarding questions set.")
+            await ctx.send("No verification questions set.")
             return
 
         question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {q['answer']}" for i, q in enumerate(questions)])
-        await ctx.send(f"Onboarding Questions:\n{question_list}")
+        await ctx.send(f"verification Questions:\n{question_list}")
 
     @verifyset.command()
     async def setkickonfail(self, ctx, kick_on_fail: bool):
