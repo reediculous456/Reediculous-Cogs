@@ -6,7 +6,7 @@ reediculous456's Cogs for [Red-DiscordBot](https://github.com/Cog-Creators/Red-D
 
 | Name | Status/Version | Description (Click to see full status) |
 |------|----------------|----------------------------------------|
-| Verifier | 1.0.0 | <details><summary>Verify new members by asking them questions</summary>Asks all new members questions via DM on join and awards them a role if they answer correctly</details> |
+| [Verifier](./verifier/README.md) | 1.0.0 | <details><summary>Verify new members by asking them questions</summary>Asks all new members questions via DM on join and awards them a role if they answer correctly</details> |
 
 Any questions please open a GitHub Issue
 
