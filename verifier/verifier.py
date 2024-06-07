@@ -12,13 +12,16 @@ class Verifier(commands.Cog):
         default_guild = {
             "questions": [],
             "role_id": None,
-            "kick_on_fail": False  # Default setting for kicking on fail
+            "kick_on_fail": False,
+            "verification_enabled": False
         }
         self.config.register_guild(**default_guild)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        await self.ask_questions(member)
+        verification_enabled = await self.config.guild(member.guild).verification_enabled()
+        if verification_enabled:
+            await self.ask_questions(member)
 
     async def get_prefix(self, guild):
         # Retrieve the prefix for the guild
@@ -67,6 +70,11 @@ class Verifier(commands.Cog):
     @commands.command()
     async def verify(self, ctx):
         """Manually trigger the verification process."""
+        verification_enabled = await self.config.guild(ctx.guild).verification_enabled()
+        if not verification_enabled:
+            await ctx.send("Verification is currently disabled.")
+            return
+
         member = ctx.author
         role_id = await self.config.guild(ctx.guild).role_id()
         role = get(ctx.guild.roles, id=role_id)
@@ -113,3 +121,10 @@ class Verifier(commands.Cog):
         await self.config.guild(ctx.guild).kick_on_fail.set(kick_on_fail)
         status = "enabled" if kick_on_fail else "disabled"
         await ctx.send(f"Kicking on verification failure has been {status}.")
+
+    @verifyset.command()
+    async def setverification(self, ctx, verification_enabled: bool):
+        """Enable or disable the verification process."""
+        await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
+        status = "enabled" if verification_enabled else "disabled"
+        await ctx.send(f"Verification has been {status}.")
