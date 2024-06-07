@@ -132,10 +132,10 @@ class Verifier(commands.Cog):
         await ctx.send(f"Kicking on verification failure has been {status}.")
 
     @verifyset.command()
-    async def setverification(self, ctx, verification_enabled: bool):
+    async def enabled(self, ctx, verification_enabled: bool):
         """Enable or disable the verification process."""
         if verification_enabled is None:
-            await ctx.send_help('verifyset setverification')
+            await ctx.send_help('verifyset enabled')
             return
         await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
         status = "enabled" if verification_enabled else "disabled"

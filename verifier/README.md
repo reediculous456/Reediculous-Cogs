@@ -85,7 +85,7 @@ This command will only work if the user is not already verified.
 - `[p]verifyset setonboardrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset listquestions`: Lists all verification questions.
-- `[p]verifyset setverification true/false`: Enables or disables the verification process.
+- `[p]verifyset enabled true/false`: Enables or disables the verification process.
 - `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 
 ## Example Configuration
@@ -118,7 +118,7 @@ This command will only work if the user is not already verified.
 5. **Enable/Disable Verification**:
 
    ```;
-   [p]verifyset setverification true
+   [p]verifyset enabled true
    ```
 
 6. **Optional: Kick on Fail**:
