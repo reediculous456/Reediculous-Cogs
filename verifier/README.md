@@ -36,7 +36,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 - `[p]verifyset setverifiedrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset removequestion <index>`: Removes a question from the verification quiz by its index.
-- `[p]verifyset listquestions`: Lists all verification questions.
+- `[p]verifyset listquestions`: Lists all verification questions. List is deleted after 60 seconds.
 - `[p]verifyset enabled true/false`: Enables or disables the verification process.
 - `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 
