@@ -1,4 +1,4 @@
-# RedBot-Cogs V3 [![Red-DiscordBot](https://img.shields.io/badge/Red--DiscordBot-V3-red.svg)](https://github.com/Cog-Creators/Red-DiscordBot) ![Discord.py](https://img.shields.io/badge/Discord.py-rewrite-blue.svg)
+# RedBot-Cogs V3 [![Red-DiscordBot](https://img.shields.io/badge/Red--DiscordBot-V3-red.svg)](https://github.com/Cog-Creators/Red-DiscordBot) ![Discord.py](https://img.shields.io/badge/Discord.py-blue.svg)
 
 reediculous456's Cogs for [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop).To add the cogs to your instance please do: `[p]repo add reediculous456 https://github.com/reediculous456/RedBot-Cogs/`
 
