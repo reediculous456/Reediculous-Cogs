@@ -21,18 +21,17 @@ class Verifier(commands.Cog):
     async def on_member_join(self, member):
         verification_enabled = await self.config.guild(member.guild).verification_enabled()
         if verification_enabled:
-            await self.ask_questions(member)
+            await self.ask_questions(member, member.guild)
 
-    async def get_prefix(self, guild):
+    async def get_prefix(self, message):
         # Retrieve the prefix for the guild
-        prefixes = await self.bot.get_prefix(guild)
+        prefixes = await self.bot.get_prefix(message)
         if isinstance(prefixes, list):
             return prefixes[0]
         return prefixes
 
-    async def ask_questions(self, member):
-        guild = member.guild
-        prefix = await self.get_prefix(guild)
+    async def ask_questions(self, member, guild):
+        prefix = await self.get_prefix(member)
         questions = await self.config.guild(guild).questions()
         role_id = await self.config.guild(guild).role_id()
         role = get(guild.roles, id=role_id)
@@ -82,7 +81,7 @@ class Verifier(commands.Cog):
         if role in member.roles:
             await ctx.send("You are already verified.")
         else:
-            await self.ask_questions(member)
+            await self.ask_questions(member, ctx.guild)
 
     @commands.group()
     @commands.admin_or_permissions(manage_channels=True)
