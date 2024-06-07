@@ -89,8 +89,7 @@ class Verifier(commands.Cog):
     @commands.guild_only()
     async def verifyset(self, ctx: commands.Context) -> None:
         """Sets verification module settings."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help('verifyset')
+        return
 
     @verifyset.command()
     async def setonboardrole(self, ctx, role: discord.Role):
