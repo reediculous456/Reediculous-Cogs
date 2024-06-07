@@ -1,0 +1,2 @@
+discord==2.3.2
+Red-DiscordBot==3.5.9
