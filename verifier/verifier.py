@@ -18,12 +18,6 @@ class Verifier(commands.Cog):
         }
         self.config.register_guild(**default_guild)
 
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        verification_enabled = await self.config.guild(member.guild).verification_enabled()
-        if verification_enabled:
-            await self.ask_questions(member, member.guild)
-
     async def get_prefix(self, member: discord.Member):
         # Retrieve the prefix for the guild
         prefixes = await self.bot.get_prefix(member)
@@ -70,6 +64,12 @@ class Verifier(commands.Cog):
             await member.add_roles(role)
         except asyncio.TimeoutError:
             await member.send(f'You took too long to respond. To restart this process run the command {prefix}verify in the server.')
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        verification_enabled = await self.config.guild(member.guild).verification_enabled()
+        if verification_enabled:
+            await self.ask_questions(member, member.guild)
 
     @commands.guild_only()
     @commands.command()
