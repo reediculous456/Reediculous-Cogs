@@ -6,7 +6,7 @@
   "install_msg": "Thank you for installing Verifier!",
   "description": "Verify your users by asking them questions via DM",
   "short": "Verification system",
-  "tags": [],
+  "tags": ["verify"],
   "type": "COG",
   "end_user_data_statement": "This cog does not persistently store data or metadata about users.",
   "min_bot_version": "3.5.0"

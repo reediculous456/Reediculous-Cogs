@@ -3,8 +3,8 @@
     "reediculous456"
   ],
   "install_msg": "Thank you for installing! If you come across an issue, please make an issue on my github.",
-  "name": "reediculous456",
+  "name": "RedBot-Cogs",
   "short": "Cogs from reediculous456",
   "description": "A collection of cogs",
-  "tags": []
+  "tags": ["verify"]
 }
