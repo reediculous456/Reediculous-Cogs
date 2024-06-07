@@ -136,7 +136,7 @@ class Verifier(commands.Cog):
             await ctx.send("No verification questions set.")
             return
 
-        question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {', '.join(q['answers'])}" for i, q in enumerate(questions)])
+        question_list = "\n".join([f'{i+1}. Q: "{q["question"]}" A: {", ".join(q["answers"])}' for i, q in enumerate(questions)])
         await ctx.send(f"Verification Questions:\n{question_list}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
 
     @verifyset.command()
