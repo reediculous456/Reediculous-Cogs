@@ -19,23 +19,23 @@ class Verifier(commands.Cog):
         self.config.register_guild(**default_guild)
 
     @commands.Cog.listener()
-    async def on_member_join(self, member):
+    async def on_member_join(self, member: discord.Member):
         verification_enabled = await self.config.guild(member.guild).verification_enabled()
         if verification_enabled:
             await self.ask_questions(member, member.guild)
 
-    async def get_prefix(self, message):
+    async def get_prefix(self, member: discord.Member):
         # Retrieve the prefix for the guild
-        prefixes = await self.bot.get_prefix(message)
+        prefixes = await self.bot.get_prefix(member)
         if isinstance(prefixes, list):
             return prefixes[0]
         return prefixes
 
-    def normalize_answer(self, answer):
+    def normalize_answer(self, answer: str):
         # Remove non-alphanumeric characters and convert to lowercase
         return re.sub(r'[^a-zA-Z0-9]', '', answer).lower()
 
-    async def ask_questions(self, member, guild):
+    async def ask_questions(self, member: discord.Member, guild: discord.Guild):
         prefix = await self.get_prefix(member)
         questions = await self.config.guild(guild).questions()
         role_id = await self.config.guild(guild).role_id()
@@ -73,7 +73,7 @@ class Verifier(commands.Cog):
 
     @commands.guild_only()
     @commands.command()
-    async def verify(self, ctx):
+    async def verify(self, ctx: commands.Context):
         """Manually trigger the verification process."""
         verification_enabled = await self.config.guild(ctx.guild).verification_enabled()
         if not verification_enabled:
@@ -97,7 +97,7 @@ class Verifier(commands.Cog):
         return
 
     @verifyset.command()
-    async def setverifiedrole(self, ctx, role: discord.Role):
+    async def setverifiedrole(self, ctx: commands.Context, role: discord.Role):
         """Set the role to be granted upon correct answers."""
         if role is None:
             await ctx.send_help('verifyset setverifiedrole')
@@ -106,7 +106,7 @@ class Verifier(commands.Cog):
         await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
-    async def addquestion(self, ctx, question: str, *answers: str):
+    async def addquestion(self, ctx: commands.Context, question: str, *answers: str):
         """Add a question to the verification quiz. Provide multiple answers separated by spaces."""
         if question is None or not answers:
             await ctx.send_help('verifyset addquestion')
@@ -116,7 +116,7 @@ class Verifier(commands.Cog):
         await ctx.send("Question added.")
 
     @verifyset.command()
-    async def removequestion(self, ctx, index: int = None):
+    async def removequestion(self, ctx: commands.Context, index: int):
         """Remove a question from the verification quiz by its index."""
         if index is None:
             await ctx.send_help('verifyset removequestion')
@@ -129,7 +129,7 @@ class Verifier(commands.Cog):
                 await ctx.send("Invalid question index.")
 
     @verifyset.command()
-    async def listquestions(self, ctx):
+    async def listquestions(self, ctx: commands.Context):
         """List all verification questions."""
         questions = await self.config.guild(ctx.guild).questions()
         if not questions:
@@ -140,7 +140,7 @@ class Verifier(commands.Cog):
         await ctx.send(f"Verification Questions:\n{question_list}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
 
     @verifyset.command()
-    async def setkickonfail(self, ctx, kick_on_fail: bool):
+    async def setkickonfail(self, ctx: commands.Context, kick_on_fail: bool):
         """Enable or disable kicking the user on verification failure."""
         if kick_on_fail is None:
             await ctx.send_help('verifyset setkickonfail')
@@ -150,7 +150,7 @@ class Verifier(commands.Cog):
         await ctx.send(f"Kicking on verification failure has been {status}.")
 
     @verifyset.command()
-    async def enabled(self, ctx, verification_enabled: bool):
+    async def enabled(self, ctx: commands.Context, verification_enabled: bool):
         """Enable or disable the verification process."""
         if verification_enabled is None:
             await ctx.send_help('verifyset enabled')
