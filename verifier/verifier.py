@@ -11,7 +11,8 @@ class Verifier(commands.Cog):
         self.config = Config.get_conf(self, identifier=10061998)
         default_guild = {
             "questions": [],
-            "role_id": None
+            "role_id": None,
+            "kick_on_fail": False  # Default setting for kicking on fail
         }
         self.config.register_guild(**default_guild)
 
@@ -32,6 +33,7 @@ class Verifier(commands.Cog):
         questions = await self.config.guild(guild).questions()
         role_id = await self.config.guild(guild).role_id()
         role = get(guild.roles, id=role_id)
+        kick_on_fail = await self.config.guild(guild).kick_on_fail()
 
         if not role:
             await member.send("The admins of this server have enabled verification questions but have not set the role to be granted upon correct answers. Please contact them to have this corrected.")
@@ -50,7 +52,11 @@ class Verifier(commands.Cog):
                 await member.send(q["question"])
                 msg = await self.bot.wait_for('message', check=check, timeout=90.0)
                 if msg.content.lower() != q["answer"].lower():
-                    await member.send("Incorrect answer. Please contact an admin if you believe this is a mistake.")
+                    if kick_on_fail:
+                        await member.send("Incorrect answer. You have been removed from the server.")
+                        await guild.kick(member)
+                    else:
+                        await member.send("Incorrect answer. Please contact an admin if you believe this is a mistake.")
                     return
             await member.send("Congratulations! You have answered all questions correctly.")
             await member.add_roles(role)
@@ -100,3 +106,10 @@ class Verifier(commands.Cog):
 
         question_list = "\n".join([f"Q: {q['question']} A: {q['answer']}" for q in questions])
         await ctx.send(f"Onboarding Questions:\n{question_list}")
+
+    @verifyset.command()
+    async def setkickonfail(self, ctx, kick_on_fail: bool):
+        """Enable or disable kicking the user on verification failure."""
+        await self.config.guild(ctx.guild).kick_on_fail.set(kick_on_fail)
+        status = "enabled" if kick_on_fail else "disabled"
+        await ctx.send(f"Kicking on verification failure has been {status}.")

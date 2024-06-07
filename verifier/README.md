@@ -83,6 +83,7 @@ This command will only work if the user is not already verified.
 - `[p]verifyset setonboardrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset listquestions`: Lists all verification questions.
+- `[p]verifyset setkickonfail`: Sets the bot to kick users who fail verification. (default is `False`)
 
 ## Example Configuration
 
@@ -110,6 +111,12 @@ This command will only work if the user is not already verified.
    ```;
    [p]verify
    ```
+
+5. **Optional: Kick on Fail**:
+
+   ```;
+    [p]verifyset setkickonfail True
+    ```
 
 ## Notes
 
