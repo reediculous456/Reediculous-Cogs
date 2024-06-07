@@ -95,12 +95,18 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def setonboardrole(self, ctx, role: discord.Role):
         """Set the role to be granted upon correct answers."""
+        if role is None:
+            await ctx.send_help('verifyset setonboardrole')
+            return
         await self.config.guild(ctx.guild).role_id.set(role.id)
         await ctx.send(f"The onboarding role has been set to {role.name}.")
 
     @verifyset.command()
     async def addquestion(self, ctx, question: str, answer: str):
         """Add a question to the onboarding quiz."""
+        if question is None or answer is None:
+            await ctx.send_help('verifyset addquestion')
+            return
         async with self.config.guild(ctx.guild).questions() as questions:
             questions.append({"question": question, "answer": answer})
         await ctx.send("Question added.")
@@ -119,6 +125,9 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def setkickonfail(self, ctx, kick_on_fail: bool):
         """Enable or disable kicking the user on verification failure."""
+        if kick_on_fail is None:
+            await ctx.send_help('verifyset setkickonfail')
+            return
         await self.config.guild(ctx.guild).kick_on_fail.set(kick_on_fail)
         status = "enabled" if kick_on_fail else "disabled"
         await ctx.send(f"Kicking on verification failure has been {status}.")
@@ -126,6 +135,9 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def setverification(self, ctx, verification_enabled: bool):
         """Enable or disable the verification process."""
+        if verification_enabled is None:
+            await ctx.send_help('verifyset setverification')
+            return
         await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
         status = "enabled" if verification_enabled else "disabled"
         await ctx.send(f"Verification has been {status}.")
