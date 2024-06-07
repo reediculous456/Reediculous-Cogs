@@ -1,94 +1,102 @@
-from datetime import datetime, timezone
-from typing import Literal, Optional
-
 import discord
-from discord.ext import tasks
-from red_commons.logging import getLogger
-from redbot.core import Config, checks, commands
-from redbot.core.i18n import Translator, cog_i18n
-from redbot.core.utils.chat_formatting import humanize_list
-
-log = getLogger("red.reediculous456.Verifier")
-
-default_greeting = "Welcome {0.name} to {1.name}!"
-default_goodbye = "See you later {0.name}!"
-default_bot_msg = "Hello {0.name}, fellow bot!"
-default_settings = {
-    "GREETING": [default_greeting],
-    "ON": False,
-    "LEAVE_ON": False,
-    "LEAVE_CHANNEL": None,
-    "GROUPED": False,
-    "GOODBYE": [default_goodbye],
-    "CHANNEL": None,
-    "WHISPER": False,
-    "BOTS_MSG": default_bot_msg,
-    "BOTS_GOODBYE_MSG": "Goodbye {0.name}, fellow bot!",
-    "BOTS_ROLE": None,
-    "EMBED": False,
-    "JOINED_TODAY": False,
-    "MINIMUM_DAYS": 0,
-    "DELETE_PREVIOUS_GREETING": False,
-    "DELETE_AFTER_GREETING": None,
-    "DELETE_PREVIOUS_GOODBYE": False,
-    "DELETE_AFTER_GOODBYE": None,
-    "LAST_GREETING": None,
-    "FILTER_SETTING": None,
-    "LAST_GOODBYE": None,
-    "MENTIONS": {"users": True, "roles": False, "everyone": False},
-    "GOODBYE_MENTIONS": {"users": True, "roles": False, "everyone": False},
-    "EMBED_DATA": {
-        "title": None,
-        "colour": 0,
-        "colour_goodbye": 0,
-        "footer": None,
-        "thumbnail": "avatar",
-        "image": None,
-        "image_goodbye": None,
-        "icon_url": None,
-        "author": True,
-        "timestamp": True,
-        "mention": False,
-    },
-}
+import asyncio
+from redbot.core import commands, Config
+from discord.utils import get
 
 class Verifier(commands.Cog):
-  """My custom cog"""
+    """A cog that handles user verification with questions."""
 
-  def __init__(self, bot):
-    self.bot = bot
-    self.config = Config.get_conf(self, 144465786453, force_registration=True)
-    self.config.register_guild(**default_settings)
-    self.joined = {}
-    self.today_count = {"now": datetime.now(timezone.utc)}
-    self.detect_joins.start()
+    def __init__(self, bot):
+        self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)
+        default_guild = {
+            "questions": [],
+            "role_id": None
+        }
+        self.config.register_guild(**default_guild)
 
-  @commands.group()
-  @checks.admin_or_permissions(manage_channels=True)
-  @commands.guild_only()
-  async def verifyset(self, ctx: commands.Context) -> None:
-      """Sets verifier module settings"""
-      pass
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        await self.ask_questions(member)
 
-  @tasks.loop(seconds=10)
-  async def detect_joins(self) -> None:
-      clear_guilds = []
-      for guild_id, members in self.joined.items():
-          if members:
-              last_time_id = await self.config.guild_from_id(guild_id).LAST_GREETING()
-              if last_time_id is not None:
-                  last_time = (
-                      datetime.now(timezone.utc) - discord.utils.snowflake_time(last_time_id)
-                  ).total_seconds()
-                  if len(members) > 1 and last_time <= 30.0:
-                      continue
-              try:
-                  await self.send_member_join(members, self.bot.get_guild(guild_id))
-                  clear_guilds.append(guild_id)
-              except Exception:
-                  log.exception("Error in group welcome:")
-      for guild_id in clear_guilds:
-          try:
-              del self.joined[guild_id]
-          except KeyError:
-              pass
+    async def get_prefix(self, guild):
+        # Retrieve the prefix for the guild
+        prefixes = await self.bot.get_prefix(guild)
+        if isinstance(prefixes, list):
+            return prefixes[0]
+        return prefixes
+
+    async def ask_questions(self, member):
+        guild = member.guild
+        prefix = await self.get_prefix(guild)
+        questions = await self.config.guild(guild).questions()
+        role_id = await self.config.guild(guild).role_id()
+        role = get(guild.roles, id=role_id)
+
+        if not role:
+            await member.send("The admins of this server have enabled verification questions but have not set the role to be granted upon correct answers. Please contact them to have this corrected.")
+            return
+
+        if not questions:
+            await member.send("The admins of this server have enabled verification questions but have not set any questions. Please contact them to have this corrected.")
+            return
+
+        def check(m):
+            return m.author == member and isinstance(m.channel, discord.DMChannel)
+
+        try:
+            await member.send("Welcome! Please answer the following questions correctly to gain access to the server. You have 90 seconds to answer each question.")
+            for q in questions:
+                await member.send(q["question"])
+                msg = await self.bot.wait_for('message', check=check, timeout=90.0)
+                if msg.content.lower() != q["answer"].lower():
+                    await member.send("Incorrect answer. Please contact an admin if you believe this is a mistake.")
+                    return
+            await member.send("Congratulations! You have answered all questions correctly.")
+            await member.add_roles(role)
+        except asyncio.TimeoutError:
+            await member.send(f'You took too long to respond. To restart this process run the command {prefix}verify in the server.')
+
+    @commands.guild_only()
+    @commands.command()
+    async def verify(self, ctx):
+        """Manually trigger the verification process."""
+        member = ctx.author
+        role_id = await self.config.guild(ctx.guild).role_id()
+        role = get(ctx.guild.roles, id=role_id)
+
+        if role in member.roles:
+            await ctx.send("You are already verified.")
+        else:
+            await self.ask_questions(member)
+
+    @commands.group()
+    @commands.admin_or_permissions(manage_channels=True)
+    @commands.guild_only()
+    async def verifyset(self, ctx: commands.Context) -> None:
+        """Sets verification module settings"""
+        pass
+
+    @verifyset.command()
+    async def setonboardrole(self, ctx, role: discord.Role):
+        """Set the role to be granted upon correct answers."""
+        await self.config.guild(ctx.guild).role_id.set(role.id)
+        await ctx.send(f"The onboarding role has been set to {role.name}.")
+
+    @verifyset.command()
+    async def addquestion(self, ctx, question: str, answer: str):
+        """Add a question to the onboarding quiz."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            questions.append({"question": question, "answer": answer})
+        await ctx.send("Question added.")
+
+    @verifyset.command()
+    async def listquestions(self, ctx):
+        """List all onboarding questions."""
+        questions = await self.config.guild(ctx.guild).questions()
+        if not questions:
+            await ctx.send("No onboarding questions set.")
+            return
+
+        question_list = "\n".join([f"Q: {q['question']} A: {q['answer']}" for q in questions])
+        await ctx.send(f"Onboarding Questions:\n{question_list}")
