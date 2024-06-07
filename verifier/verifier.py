@@ -53,7 +53,7 @@ class Verifier(commands.Cog):
             for q in questions:
                 await member.send(q["question"])
                 msg = await self.bot.wait_for('message', check=check, timeout=90.0)
-                if msg.content.lower() != q["answer"].lower():
+                if not any(answer.lower() == msg.content.lower() for answer in q["answers"]):
                     if kick_on_fail:
                         await member.send("Incorrect answer. You have been removed from the server.")
                         await guild.kick(member)
@@ -100,13 +100,13 @@ class Verifier(commands.Cog):
         await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
-    async def addquestion(self, ctx, question: str, answer: str):
-        """Add a question to the verification quiz."""
-        if question is None or answer is None:
+    async def addquestion(self, ctx, question: str, *answers: str):
+        """Add a question to the verification quiz. Provide multiple answers separated by spaces."""
+        if question is None or not answers:
             await ctx.send_help('verifyset addquestion')
             return
         async with self.config.guild(ctx.guild).questions() as questions:
-            questions.append({"question": question, "answer": answer})
+            questions.append({"question": question, "answers": list(answers)})
         await ctx.send("Question added.")
 
     @verifyset.command()
@@ -130,7 +130,7 @@ class Verifier(commands.Cog):
             await ctx.send("No verification questions set.")
             return
 
-        question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {q['answer']}" for i, q in enumerate(questions)])
+        question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {', '.join(q['answers'])}" for i, q in enumerate(questions)])
         await ctx.send(f"verification Questions:\n{question_list}")
 
     @verifyset.command()
