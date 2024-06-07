@@ -15,6 +15,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 
 - This cog does not stop users from interacting with your server. The intent is that you lock all desired functionality behind the assigned verification role.
 - This cog does not offer a way for a user to contact a mod if they fail verification. My recommendation is to have a channel where users can ask for help if they fail verification.
+- To help prevent issues with users failing verification, answers are not case sensitive. This means that "Paris" and "paris" are considered the same answer. Also, special characters are removed from answers before comparison. This means that "Paris!" and "Paris" are considered the same answer.
 
 ## Installation
 

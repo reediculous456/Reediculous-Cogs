@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import re
 from redbot.core import commands, Config
 from discord.utils import get
 
@@ -30,6 +31,10 @@ class Verifier(commands.Cog):
             return prefixes[0]
         return prefixes
 
+    def normalize_answer(self, answer):
+        # Remove non-alphanumeric characters and convert to lowercase
+        return re.sub(r'[^a-zA-Z0-9]', '', answer).lower()
+
     async def ask_questions(self, member, guild):
         prefix = await self.get_prefix(member)
         questions = await self.config.guild(guild).questions()
@@ -53,7 +58,8 @@ class Verifier(commands.Cog):
             for q in questions:
                 await member.send(q["question"])
                 msg = await self.bot.wait_for('message', check=check, timeout=90.0)
-                if not any(answer.lower() == msg.content.lower() for answer in q["answers"]):
+                normalized_response = self.normalize_answer(msg.content)
+                if not any(normalized_response == self.normalize_answer(answer) for answer in q["answers"]):
                     if kick_on_fail:
                         await member.send("Incorrect answer. You have been removed from the server.")
                         await guild.kick(member)
@@ -131,7 +137,7 @@ class Verifier(commands.Cog):
             return
 
         question_list = "\n".join([f"{i+1}. Q: {q['question']} A: {', '.join(q['answers'])}" for i, q in enumerate(questions)])
-        await ctx.send(f"verification Questions:\n{question_list}")
+        await ctx.send(f"Verification Questions:\n{question_list}")
 
     @verifyset.command()
     async def setkickonfail(self, ctx, kick_on_fail: bool):
