@@ -8,7 +8,7 @@ class Verifier(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=10061998)
         default_guild = {
             "questions": [],
             "role_id": None
