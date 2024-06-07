@@ -18,8 +18,10 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 
 ## Installation
 
-1. Ensure you have [Redbot](https://github.com/Cog-Creators/Red-DiscordBot) installed and running.
-2. `[p]cog install reediculous456 verifier`
+```;
+[p]cog install reediculous456 verifier
+[p]load verifier
+```
 
 ## Usage
 
