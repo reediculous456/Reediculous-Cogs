@@ -11,6 +11,11 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 - Includes a command for users to manually trigger the verification process.
 - Administrative commands for setting the role and managing the questions.
 
+## Caveats
+
+- This cog does not stop users from interacting with your server. The intent is that you lock all desired functionality behind the assigned verification role.
+- This cog does not offer a way for a user to contact a mod if they fail verification. My recommendation is to have a channel where users can ask for help if they fail verification.
+
 ## Installation
 
 1. Ensure you have [Redbot](https://github.com/Cog-Creators/Red-DiscordBot) installed and running.
