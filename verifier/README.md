@@ -19,7 +19,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 ## Installation
 
 1. Ensure you have [Redbot](https://github.com/Cog-Creators/Red-DiscordBot) installed and running.
-2. Place the `verifier.py` file in your `cogs` directory.
+2. `[p]cog install reediculous456 verifier`
 
 ## Usage
 
