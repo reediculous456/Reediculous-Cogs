@@ -10,6 +10,7 @@ class Verifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=10061998)
+        self.forbidden_help_message = 'please enable setting ‘Allow direct messages from server members.’ to complete the verification process.'
         default_guild = {
             "questions": [],
             "role_id": None,
@@ -29,7 +30,7 @@ class Verifier(commands.Cog):
         # Remove non-alphanumeric characters and convert to lowercase
         return re.sub(r'[^a-zA-Z0-9]', '', answer).lower()
 
-    async def ask_questions(self, member: discord.Member, guild: discord.Guild):
+    async def ask_questions(self, member: discord.Member, guild: discord.Guild, channel: discord.TextChannel):
         prefix = await self.get_prefix(member)
         questions = await self.config.guild(guild).questions()
         role_id = await self.config.guild(guild).role_id()
@@ -37,11 +38,17 @@ class Verifier(commands.Cog):
         kick_on_fail = await self.config.guild(guild).kick_on_fail()
 
         if not role:
-            await member.send("The admins of this server have enabled verification questions but have not set the role to be granted upon correct answers. Please contact them to have this corrected.")
+            try:
+                await member.send("The admins of this server have enabled verification questions but have not set the role to be granted upon correct answers. Please contact them to have this corrected.")
+            except discord.Forbidden:
+                await channel.send(f"{member.mention}, {self.forbidden_help_message}")
             return
 
         if not questions:
-            await member.send("The admins of this server have enabled verification questions but have not set any questions. Please contact them to have this corrected.")
+            try:
+                await member.send("The admins of this server have enabled verification questions but have not set any questions. Please contact them to have this corrected.")
+            except discord.Forbidden:
+                await channel.send(f"{member.mention}, {self.forbidden_help_message}")
             return
 
         def check(m):
@@ -62,6 +69,8 @@ class Verifier(commands.Cog):
                     return
             await member.send("Congratulations! You have answered all questions correctly.")
             await member.add_roles(role)
+        except discord.Forbidden:
+            await channel.send(f"{member.mention}, {self.forbidden_help_message}")
         except asyncio.TimeoutError:
             await member.send(f'You took too long to respond. To restart this process run the command {prefix}verify in the server.')
 
@@ -69,7 +78,7 @@ class Verifier(commands.Cog):
     async def on_member_join(self, member: discord.Member):
         verification_enabled = await self.config.guild(member.guild).verification_enabled()
         if verification_enabled:
-            await self.ask_questions(member, member.guild)
+            await self.ask_questions(member, member.guild, member.guild.system_channel)
 
     @commands.guild_only()
     @commands.command()
@@ -87,7 +96,7 @@ class Verifier(commands.Cog):
         if role in member.roles:
             await ctx.send("You are already verified.")
         else:
-            await self.ask_questions(member, ctx.guild)
+            await self.ask_questions(member, ctx.guild, ctx.channel)
 
     @commands.group()
     @commands.admin_or_permissions(manage_channels=True)
