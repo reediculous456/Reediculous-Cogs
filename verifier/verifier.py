@@ -10,7 +10,7 @@ class Verifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=10061998)
-        self.forbidden_help_message = 'please enable direct messages from server members to complete the verification process.\nOn desktop: click the server name, then "Privacy Settings", and turn on Direct Messages\nOn Mobile: click the server name, then scroll down and turn on "Allow Direct Messages"'
+        self.forbidden_help_message = 'please enable direct messages from server members to complete the verification process.\nOn desktop: click the server name, then "Privacy Settings", and turn on "Direct Messages"\nOn Mobile: click the server name, then scroll down and turn on "Allow Direct Messages"'
         default_guild = {
             "questions": [],
             "role_id": None,
