@@ -1,6 +1,7 @@
 import discord
 import asyncio
 import re
+import random
 from redbot.core import commands, Config
 from discord.utils import get
 
@@ -10,12 +11,17 @@ class Verifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=10061998)
-        self.forbidden_help_message = 'please enable direct messages from server members to complete the verification process.\nOn desktop: click the server name, then "Privacy Settings", and turn on "Direct Messages"\nOn Mobile: click the server name, then scroll down and turn on "Allow Direct Messages"'
+        self.forbidden_help_message = (
+            'please enable direct messages from server members to complete the verification process.\n'
+            'On desktop: click the server name, then "Privacy Settings", and turn on "Direct Messages"\n'
+            'On Mobile: click the server name, then scroll down and turn on "Allow Direct Messages"'
+        )
         default_guild = {
             "questions": [],
             "role_id": None,
             "kick_on_fail": False,
-            "verification_enabled": False
+            "verification_enabled": False,
+            "num_questions_to_ask": None
         }
         self.config.register_guild(**default_guild)
 
@@ -36,6 +42,7 @@ class Verifier(commands.Cog):
         role_id = await self.config.guild(guild).role_id()
         role = get(guild.roles, id=role_id)
         kick_on_fail = await self.config.guild(guild).kick_on_fail()
+        num_questions_to_ask = await self.config.guild(guild).num_questions_to_ask()
 
         if not role:
             try:
@@ -50,6 +57,9 @@ class Verifier(commands.Cog):
             except discord.Forbidden:
                 await channel.send(f"{member.mention}, {self.forbidden_help_message}")
             return
+
+        if num_questions_to_ask and num_questions_to_ask < len(questions):
+            questions = random.sample(questions, num_questions_to_ask)
 
         def check(m):
             return m.author == member and isinstance(m.channel, discord.DMChannel)
@@ -138,6 +148,19 @@ class Verifier(commands.Cog):
                 await ctx.send("Invalid question index.")
 
     @verifyset.command()
+    async def editquestion(self, ctx: commands.Context, index: int, question: str, *answers: str):
+        """Edit a question in the verification quiz by its index."""
+        if index is None or question is None or not answers:
+            await ctx.send_help('verifyset editquestion')
+            return
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if 0 < index <= len(questions):
+                questions[index - 1] = {"question": question, "answers": list(answers)}
+                await ctx.send(f"Question {index} has been updated.")
+            else:
+                await ctx.send("Invalid question index.")
+
+    @verifyset.command()
     async def listquestions(self, ctx: commands.Context):
         """List all verification questions."""
         questions = await self.config.guild(ctx.guild).questions()
@@ -167,3 +190,13 @@ class Verifier(commands.Cog):
         await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
         status = "enabled" if verification_enabled else "disabled"
         await ctx.send(f"Verification has been {status}.")
+
+    @verifyset.command()
+    async def setnumquestions(self, ctx: commands.Context, num_questions: int | bool):
+        """Set the number of questions to ask during verification. Use true to ask all questions."""
+        if num_questions is True:
+          await self.config.guild(ctx.guild).num_questions_to_ask.set(None)
+        else:
+          await self.config.guild(ctx.guild).num_questions_to_ask.set(num_questions)
+
+        await ctx.send(f"The number of questions to ask during verification has been set to {num_questions}.")

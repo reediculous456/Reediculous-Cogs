@@ -82,6 +82,16 @@ Remove a question from the verification process by its index:
 
 Replace `1` with the index of the question you want to remove.
 
+### Editing Verification Questions
+
+Edit a question in the verification process by its index:
+
+```;
+[p]verifyset editquestion 1 "What is 3+3?" "6" "six"
+```
+
+Replace `1` with the index of the question you want to edit, and update the question and answers as needed.
+
 ### Listing Verification Questions
 
 List all configured verification questions:
@@ -98,7 +108,35 @@ Users can manually trigger the verification process using the following command:
 [p]verify
 ```
 
-This command will only work if the user is not already verified.
+This command will only work if the user is not already verified and verification is enabled.
+
+### Setting Number of Questions to Ask
+
+Set the number of questions to ask during the verification process:
+
+```;
+[p]verifyset setnumquestions 3
+```
+
+You also can use `True` to ask all questions in the list.
+
+### Enabling/Disabling Kick on Fail
+
+Enable or disable kicking users who fail the verification:
+
+```;
+[p]verifyset setkickonfail true
+[p]verifyset setkickonfail false
+```
+
+### Enabling/Disabling Verification
+
+Enable or disable the verification process:
+
+```;
+[p]verifyset enabled true
+[p]verifyset enabled false
+```
 
 ## Example Configuration
 
