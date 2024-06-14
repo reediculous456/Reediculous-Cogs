@@ -48,12 +48,49 @@ class QuoteOfTheDay(commands.Cog):
                 await ctx.send("Quote not found.")
 
     @quote.command()
-    async def bulkadd(self, ctx, *, quotes: str):
+    async def bulkadd(self, ctx, *, quotes: str = None):
         """Bulk add quotes separated by '|'. Example: quote1 | quote2 | quote3"""
-        new_quotes = [q.strip() for q in quotes.split('|')]
+        if ctx.message.attachments:
+            attachment = ctx.message.attachments[0]
+            if attachment.filename.endswith(".txt"):
+                content = (await attachment.read()).decode('utf-8')
+                new_quotes = [q.strip() for q in content.split('|')]
+            else:
+                await ctx.send("Please upload a valid .txt file.")
+                return
+        elif quotes:
+            new_quotes = [q.strip() for q in quotes.split('|')]
+        else:
+            await ctx.send_help(ctx.command)
+            return
+
         async with self.config.guild(ctx.guild).quotes() as current_quotes:
             current_quotes.extend(new_quotes)
+
         await ctx.send(f"Added {len(new_quotes)} quotes.")
+
+    @quote.command()
+    async def list(self, ctx, page: int = 1):
+        """List quotes in pages of 15 quotes."""
+        quotes = await self.config.guild(ctx.guild).quotes()
+        if not quotes:
+            await ctx.send("No quotes available.")
+            return
+
+        quotes_per_page = 15
+        pages = (len(quotes) + quotes_per_page - 1) // quotes_per_page
+        if page < 1 or page > pages:
+            await ctx.send(f"Invalid page number. Please choose a page between 1 and {pages}.")
+            return
+
+        start = (page - 1) * quotes_per_page
+        end = start + quotes_per_page
+        quote_list = quotes[start:end]
+        embed = discord.Embed(title=f"Quotes (Page {page}/{pages})")
+        for idx, quote in enumerate(quote_list, start=start + 1):
+            embed.add_field(name=f"Quote {idx}", value=discord.utils.escape_markdown(quote), inline=False)
+
+        await ctx.send(embed=embed)
 
     @quote.command()
     async def setchannel(self, ctx, channel: discord.TextChannel):
