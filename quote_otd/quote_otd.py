@@ -26,18 +26,18 @@ class QuoteOfTheDay(commands.Cog):
     @commands.group()
     @commands.guild_only()
     @commands.admin_or_permissions(administrator=True)
-    async def quote(self, ctx):
+    async def quoteotd(self, ctx):
         """Group of commands to manage quote posting."""
         return
 
-    @quote.command()
+    @quoteotd.command()
     async def add(self, ctx, *, quote: str):
         """Add a new quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
             quotes.append(quote)
         await ctx.send("Quote added.")
 
-    @quote.command()
+    @quoteotd.command()
     async def remove(self, ctx, *, quote: str):
         """Remove a quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
@@ -47,7 +47,7 @@ class QuoteOfTheDay(commands.Cog):
             else:
                 await ctx.send("Quote not found.")
 
-    @quote.command()
+    @quoteotd.command()
     async def bulkadd(self, ctx, *, quotes: str = None):
         """Bulk add quotes separated by '|'. Example: quote1 | quote2 | quote3"""
         if ctx.message.attachments:
@@ -69,7 +69,7 @@ class QuoteOfTheDay(commands.Cog):
 
         await ctx.send(f"Added {len(new_quotes)} quotes.")
 
-    @quote.command()
+    @quoteotd.command()
     async def list(self, ctx, page: int = 1):
         """List quotes in pages of 15 quotes."""
         quotes = await self.config.guild(ctx.guild).quotes()
@@ -92,13 +92,13 @@ class QuoteOfTheDay(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @quote.command()
+    @quoteotd.command()
     async def setchannel(self, ctx, channel: discord.TextChannel):
         """Set the channel to post quotes in."""
         await self.config.guild(ctx.guild).channel_id.set(channel.id)
         await ctx.send(f"Channel set to {channel.mention}.")
 
-    @quote.command()
+    @quoteotd.command()
     async def settime(self, ctx, hour: int, minute: int):
         """Set the time to post quotes (24-hour format)."""
         if hour is None or minute is None:
@@ -108,7 +108,7 @@ class QuoteOfTheDay(commands.Cog):
         await self.config.guild(ctx.guild).post_time.set(post_time.strftime("%H:%M"))
         await ctx.send(f"Post time set to {post_time.strftime('%H:%M')}.")
 
-    @quote.command()
+    @quoteotd.command()
     async def enabled(self, ctx: commands.Context, enabled: bool):
         """Enable or disable the daily quote posting."""
         if enabled is None:

@@ -9,6 +9,7 @@ The QuoteOfTheDay cog for RedBot posts a random quote to a specified channel at 
 - **Set Channel:** Define the channel where the quotes will be posted.
 - **Set Time:** Set the time (in 24-hour format) for posting quotes.
 - **Enable/Disable:** Enable or disable the daily quote posting.
+- - **List Quotes:** List quotes in paginated format in groups of 15.
 
 ## Installation
 
@@ -21,73 +22,88 @@ The QuoteOfTheDay cog for RedBot posts a random quote to a specified channel at 
 
 ### Admin Commands
 
-- `[p]quote add <quote>`: Add a quote to the list.
-- `[p]quote remove <quote>`: Remove a quote from the list.
-- `[p]quote bulkadd <quote1 | quote2 | quote3 | ...>`: Bulk add multiple quotes.
-- `[p]quote setchannel <#channel>`: Set the channel where quotes will be posted.
-- `[p]quote settime <hour> <minute>`: Set the time for posting quotes.
-- `[p]quote enabled <true|false>`: Enable or disable the daily quote posting.
+- `[p]quoteotd list [page]`: List quotes in pages of 15 quotes.
+- `[p]quoteotd add <quote>`: Add a quote to the list.
+- `[p]quoteotd remove <quote>`: Remove a quote from the list.
+- `[p]quoteotd bulkadd <quote1 | quote2 | quote3 | ...>`: Bulk add multiple quotes.
+- `[p]quoteotd setchannel <#channel>`: Set the channel where quotes will be posted.
+- `[p]quoteotd settime <hour> <minute>`: Set the time for posting quotes.
+- `[p]quoteotd enabled <true|false>`: Enable or disable the daily quote posting.
 
 ## Usage
 
-### Add a Quote
+### List Quotes
 
 ```text
-[p]quote add <quote>
+[p]quote list [page]
 ```
 
 Example:
 
 ```text
-[p]quote add The only limit to our realization of tomorrow is our doubts of today.
+[p]quote list 1
+```
+
+Lists the first 15 quotes. Use the page parameter to view subsequent pages.
+
+### Add a Quote
+
+```text
+[p]quoteotd add <quote>
+```
+
+Example:
+
+```text
+[p]quoteotd add The only limit to our realization of tomorrow is our doubts of today.
 ```
 
 ### Remove a Quote
 
 ```text
-[p]quote remove <quote>
+[p]quoteotd remove <quote>
 ```
 
 Example:
 
 ```text
-[p]quote remove The only limit to our realization of tomorrow is our doubts of today.
+[p]quoteotd remove The only limit to our realization of tomorrow is our doubts of today.
 ```
 
 ### Bulk Add Quotes
 
 ```text
-[p]quote bulkadd <quote1 | quote2 | quote3 | ...>
+[p]quoteotd bulkadd <quote1 | quote2 | quote3 | ...>
 ```
 
 Example:
 
 ```text
-[p]quote bulkadd The best time to plant a tree was 20 years ago. The second best time is now. | It does not matter how slowly you go as long as you do not stop.
+[p]quoteotd bulkadd The best time to plant a tree was 20 years ago. The second best time is now. | It does not matter how slowly you go as long as you do not stop.
 ```
 
 ### Set the Channel
 
 ```text
-[p]quote setchannel <#channel>
+[p]quoteotd setchannel <#channel>
 ```
 
 Example:
 
 ```text
-[p]quote setchannel #general
+[p]quoteotd setchannel #general
 ```
 
 ### Set the Time
 
 ```text
-[p]quote settime <hour> <minute>
+[p]quoteotd settime <hour> <minute>
 ```
 
 Example:
 
 ```text
-[p]quote settime 9 0
+[p]quoteotd settime 9 0
 ```
 
 This sets the posting time to 9:00 AM UTC.
@@ -95,11 +111,11 @@ This sets the posting time to 9:00 AM UTC.
 ### Enable/Disable Posting
 
 ```text
-[p]quote enabled <true|false>
+[p]quoteotd enabled <true|false>
 ```
 
 Example:
 
 ```text
-[p]quote enabled true
+[p]quoteotd enabled true
 ```
