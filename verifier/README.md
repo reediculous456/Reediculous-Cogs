@@ -1,4 +1,4 @@
-# Verifier Cog for Redbot
+# Verifier Cog
 
 ## Overview
 
@@ -19,7 +19,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 
 ## Installation
 
-```;
+```text
 [p]cog install reediculous456 verifier
 [p]load verifier
 ```
@@ -46,7 +46,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 
 Load the Verifier cog using the bot's command in your Discord server:
 
-```;
+```text
 [p]load verifier
 ```
 
@@ -56,7 +56,7 @@ Replace `[p]` with your bot's command prefix.
 
 Set the role that will be granted upon successful verification:
 
-```;
+```text
 [p]verifyset setverifiedrole @RoleName
 ```
 
@@ -66,7 +66,7 @@ Replace `@RoleName` with the actual role you want to assign.
 
 Add questions to the verification process:
 
-```;
+```text
 [p]verifyset addquestion "What is 2+2?" "4"
 ```
 
@@ -76,7 +76,7 @@ Replace the question and answer with your desired verification question and corr
 
 Remove a question from the verification process by its index:
 
-```;
+```text
 [p]verifyset removequestion 1
 ```
 
@@ -86,7 +86,7 @@ Replace `1` with the index of the question you want to remove.
 
 Edit a question in the verification process by its index:
 
-```;
+```text
 [p]verifyset editquestion 1 "What is 3+3?" "6" "six"
 ```
 
@@ -96,7 +96,7 @@ Replace `1` with the index of the question you want to edit, and update the ques
 
 List all configured verification questions:
 
-```;
+```text
 [p]verifyset listquestions
 ```
 
@@ -104,7 +104,7 @@ List all configured verification questions:
 
 Users can manually trigger the verification process using the following command:
 
-```;
+```text
 [p]verify
 ```
 
@@ -114,7 +114,7 @@ This command will only work if the user is not already verified and verification
 
 Set the number of questions to ask during the verification process:
 
-```;
+```text
 [p]verifyset setnumquestions 3
 ```
 
@@ -124,7 +124,7 @@ You also can use `True` to ask all questions in the list.
 
 Enable or disable kicking users who fail the verification:
 
-```;
+```text
 [p]verifyset setkickonfail true
 [p]verifyset setkickonfail false
 ```
@@ -133,7 +133,7 @@ Enable or disable kicking users who fail the verification:
 
 Enable or disable the verification process:
 
-```;
+```text
 [p]verifyset enabled true
 [p]verifyset enabled false
 ```
@@ -142,38 +142,38 @@ Enable or disable the verification process:
 
 1. **Set the Verification Role**:
 
-   ```;
+   ```text
    [p]verifyset setverifiedrole @Verified
    ```
 
 2. **Add Questions**:
 
-   ```;
+   ```text
    [p]verifyset addquestion "What is 2+2?" "4"
    [p]verifyset addquestion "What is the capital of France?" "Paris"
    ```
 
 3. **List Questions**:
 
-   ```;
+   ```text
    [p]verifyset listquestions
    ```
 
 4. **Manual Verification**:
 
-   ```;
+   ```text
    [p]verify
    ```
 
 5. **Enable/Disable Verification**:
 
-   ```;
+   ```text
    [p]verifyset enabled true
    ```
 
 6. **Optional: Kick on Fail**:
 
-   ```;
+   ```text
     [p]verifyset setkickonfail true
     ```
 
