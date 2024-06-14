@@ -7,6 +7,7 @@ reediculous456's Cogs for [Red-DiscordBot](https://github.com/Cog-Creators/Red-D
 | Name | Status/Version | Description (Click to see full status) |
 |------|----------------|----------------------------------------|
 | [Verifier](./verifier/README.md) | 1.0.0 | <details><summary>Verify new members by asking them questions</summary>Asks all new members questions via DM on join and awards them a role if they answer correctly</details> |
+| [Quote of the Day](./quote_otd/README.md) | 1.0.0 | <details><summary>Post a quote every day</summary>Chooses a random quote that you've provided every day and posts to a channel at the time you specify</details> |
 
 Any questions please open a GitHub Issue
 
