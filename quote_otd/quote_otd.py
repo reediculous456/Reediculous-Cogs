@@ -1,8 +1,8 @@
 from redbot.core import commands, Config
 import discord
 import random
-from datetime import datetime, time
-import asyncio
+from datetime import datetime, time, timedelta
+from discord.ext import tasks
 
 class QuoteOfTheDay(commands.Cog):
     """Post a random quote to a specified channel at a specified time each day."""
@@ -18,10 +18,10 @@ class QuoteOfTheDay(commands.Cog):
             "enabled": False
         }
         self.config.register_guild(**default_guild)
-        self.task = self.bot.loop.create_task(self.poster_task())
+        self.poster_task.start()
 
     def cog_unload(self):
-        self.task.cancel()
+        self.poster_task.cancel()
 
     @commands.group()
     @commands.guild_only()
@@ -118,16 +118,19 @@ class QuoteOfTheDay(commands.Cog):
         status = "enabled" if enabled else "disabled"
         await ctx.send(f"Quote posting has been {status}.")
 
+    @tasks.loop(minutes=1.0)
     async def poster_task(self):
-        while True:
-            for guild in self.bot.guilds:
-                guild_data = await self.config.guild(guild).all()
-                if guild_data["enabled"]:
-                    post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
-                    now = datetime.utcnow().time()
-                    if now >= post_time and (now - post_time).total_seconds() < 60:
-                        await self.post_quote(guild)
-            await asyncio.sleep(60)
+        for guild in self.bot.guilds:
+            guild_data = await self.config.guild(guild).all()
+            if guild_data["enabled"]:
+                post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
+                now = datetime.utcnow().time()
+                if now >= post_time and (now - post_time).total_seconds() < 60:
+                    await self.post_quote(guild)
+
+    @poster_task.before_loop
+    async def before_poster_task(self):
+        await self.bot.wait_until_ready()
 
     async def post_quote(self, guild):
         guild_data = await self.config.guild(guild).all()
