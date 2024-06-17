@@ -112,7 +112,7 @@ class QuoteOfTheDay(commands.Cog):
         """Set the time to post quotes (24-hour format)."""
         timezone_str = await self.config.guild(ctx.guild).timezone()
         if not timezone_str:
-            prefix = self.get_prefix(ctx.author)
+            prefix = await self.get_prefix(ctx.author)
             await ctx.send(f"Please set the guild's time zone first using `{prefix}quoteotd settimezone <timezone>`.")
             return
 
