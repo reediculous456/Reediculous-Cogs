@@ -3,11 +3,12 @@ import discord
 import random
 from datetime import datetime, time, timedelta
 from discord.ext import tasks
+import pytz
 
 class QuoteOfTheDay(commands.Cog):
     """Post a random quote to a specified channel at a specified time each day."""
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
         default_guild = {
@@ -15,6 +16,7 @@ class QuoteOfTheDay(commands.Cog):
             "posted_quotes": [],
             "channel_id": None,
             "post_time": None,
+            "timezone": None,
             "enabled": False
         }
         self.config.register_guild(**default_guild)
@@ -23,22 +25,29 @@ class QuoteOfTheDay(commands.Cog):
     def cog_unload(self):
         self.poster_task.cancel()
 
+    async def get_prefix(self, member: discord.Member):
+        # Retrieve the prefix for the guild
+        prefixes = await self.bot.get_prefix(member)
+        if isinstance(prefixes, list):
+            return prefixes[0]
+        return prefixes
+
     @commands.group()
     @commands.guild_only()
     @commands.admin_or_permissions(administrator=True)
-    async def quoteotd(self, ctx):
+    async def quoteotd(self, ctx: commands.Context):
         """Group of commands to manage quote posting."""
         return
 
     @quoteotd.command()
-    async def add(self, ctx, *, quote: str):
+    async def add(self, ctx: commands.Context, *, quote: str):
         """Add a new quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
             quotes.append(quote)
         await ctx.send("Quote added.")
 
     @quoteotd.command()
-    async def remove(self, ctx, *, quote: str):
+    async def remove(self, ctx: commands.Context, *, quote: str):
         """Remove a quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
             if quote in quotes:
@@ -48,7 +57,7 @@ class QuoteOfTheDay(commands.Cog):
                 await ctx.send("Quote not found.")
 
     @quoteotd.command()
-    async def bulkadd(self, ctx, *, quotes: str = None):
+    async def bulkadd(self, ctx: commands.Context, *, quotes: str = None):
         """Bulk add quotes separated by '|'. Example: quote1 | quote2 | quote3"""
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
@@ -70,7 +79,7 @@ class QuoteOfTheDay(commands.Cog):
         await ctx.send(f"Added {len(new_quotes)} quotes.")
 
     @quoteotd.command()
-    async def list(self, ctx, page: int = 1):
+    async def list(self, ctx: commands.Context, page: int = 1):
         """List quotes in pages of 15 quotes."""
         quotes = await self.config.guild(ctx.guild).quotes()
         if not quotes:
@@ -93,20 +102,39 @@ class QuoteOfTheDay(commands.Cog):
         await ctx.send(embed=embed)
 
     @quoteotd.command()
-    async def setchannel(self, ctx, channel: discord.TextChannel):
+    async def setchannel(self, ctx: commands.Context, channel: discord.TextChannel):
         """Set the channel to post quotes in."""
         await self.config.guild(ctx.guild).channel_id.set(channel.id)
         await ctx.send(f"Channel set to {channel.mention}.")
 
     @quoteotd.command()
-    async def settime(self, ctx, hour: int, minute: int):
+    async def settime(self, ctx: commands.Context, hour: int, minute: int):
         """Set the time to post quotes (24-hour format)."""
-        if hour is None or minute is None:
-            await ctx.send_help(ctx.command)
+        timezone_str = await self.config.guild(ctx.guild).timezone()
+        if not timezone_str:
+            prefix = self.get_prefix(ctx.author)
+            await ctx.send(f"Please set the guild's time zone first using `{prefix}quoteotd settimezone <timezone>`.")
             return
-        post_time = time(hour, minute)
-        await self.config.guild(ctx.guild).post_time.set(post_time.strftime("%H:%M"))
-        await ctx.send(f"Post time set to {post_time.strftime('%H:%M')}.")
+
+        try:
+            user_time = datetime.combine(datetime.today(), time(hour, minute))
+            user_timezone = pytz.timezone(timezone_str)
+            user_time = user_timezone.localize(user_time)
+            utc_time = user_time.astimezone(pytz.utc).time()
+            await self.config.guild(ctx.guild).post_time.set(utc_time.strftime("%H:%M"))
+            await ctx.send(f"Post time set to {utc_time.strftime('%H:%M')} UTC.")
+        except Exception as e:
+            await ctx.send(f"Error: {e}")
+
+    @quoteotd.command()
+    async def settimezone(self, ctx: commands.Context, timezone: str):
+        """Set the time zone for the guild."""
+        try:
+            pytz.timezone(timezone)  # validate the time zone
+            await self.config.guild(ctx.guild).timezone.set(timezone)
+            await ctx.send(f"Time zone set to {timezone}.")
+        except pytz.UnknownTimeZoneError:
+            await ctx.send("Invalid time zone. Please provide a valid time zone.")
 
     @quoteotd.command()
     async def enabled(self, ctx: commands.Context, enabled: bool):
@@ -124,15 +152,15 @@ class QuoteOfTheDay(commands.Cog):
             guild_data = await self.config.guild(guild).all()
             if guild_data["enabled"]:
                 post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
-                now = datetime.utcnow().time()
-                if now >= post_time and (now - post_time).total_seconds() < 60:
+                now = datetime.now().time()
+                if now >= post_time and (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds() < 60:
                     await self.post_quote(guild)
 
     @poster_task.before_loop
     async def before_poster_task(self):
         await self.bot.wait_until_ready()
 
-    async def post_quote(self, guild):
+    async def post_quote(self, guild: discord.Guild):
         guild_data = await self.config.guild(guild).all()
         channel = guild.get_channel(guild_data["channel_id"])
         if not channel:

@@ -8,8 +8,9 @@ The QuoteOfTheDay cog for RedBot posts a random quote to a specified channel at 
 - **Remove Quotes:** Remove specific quotes.
 - **Set Channel:** Define the channel where the quotes will be posted.
 - **Set Time:** Set the time (in 24-hour format) for posting quotes.
+- **Set Time Zone:** Set the time zone for the guild.
 - **Enable/Disable:** Enable or disable the daily quote posting.
-- - **List Quotes:** List quotes in paginated format in groups of 15.
+- **List Quotes:** List quotes in paginated format in groups of 15.
 
 ## Installation
 
@@ -28,6 +29,7 @@ The QuoteOfTheDay cog for RedBot posts a random quote to a specified channel at 
 - `[p]quoteotd bulkadd <quote1 | quote2 | quote3 | ...>`: Bulk add multiple quotes.
 - `[p]quoteotd setchannel <#channel>`: Set the channel where quotes will be posted.
 - `[p]quoteotd settime <hour> <minute>`: Set the time for posting quotes.
+- `[p]quoteotd settimezone <timezone>`: Set the time zone for the guild.
 - `[p]quoteotd enabled <true|false>`: Enable or disable the daily quote posting.
 
 ## Usage
@@ -107,6 +109,20 @@ Example:
 ```
 
 This sets the posting time to 9:00 AM UTC.
+
+### Set the Time Zone
+
+```text
+[p]quote settimezone <timezone>
+```
+
+Example:
+
+```text
+[p]quote settimezone America/New_York
+```
+
+This sets the guild's time zone to Eastern Time (ET). Use a valid time zone from the IANA time zone database.
 
 ### Enable/Disable Posting
 

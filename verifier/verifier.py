@@ -8,7 +8,7 @@ from discord.utils import get
 class Verifier(commands.Cog):
     """A cog that handles user verification with questions."""
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=10061998)
         self.forbidden_help_message = (
