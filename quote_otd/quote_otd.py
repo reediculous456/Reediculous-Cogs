@@ -151,11 +151,7 @@ class QuoteOfTheDay(commands.Cog):
         for guild in self.bot.guilds:
             guild_data = await self.config.guild(guild).all()
             if guild_data["enabled"] and guild_data["post_time"]:
-                guild_data = await self.config.guild(guild).all()
-                channel = guild.get_channel(guild_data["channel_id"])
-                channel.send(f"Posting quote... {guild_data['post_time']}")
                 post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
-                channel.send(f"Posting quote... {post_time}")
                 now = datetime.now().time()
                 if now >= post_time and (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds() < 60:
                     await self.post_quote(guild)
