@@ -10,7 +10,7 @@ class QuoteOfTheDay(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=2024061601)
         default_guild = {
             "quotes": [],
             "posted_quotes": [],
