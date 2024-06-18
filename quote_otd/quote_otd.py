@@ -154,6 +154,8 @@ class QuoteOfTheDay(commands.Cog):
                 post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
                 print(post_time)
                 now = datetime.now().time()
+                print(now)
+                print(now >= post_time, (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds())
                 if now >= post_time and (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds() < 60:
                     await self.post_quote(guild)
 
