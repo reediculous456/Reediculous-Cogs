@@ -153,10 +153,10 @@ class QuoteOfTheDay(commands.Cog):
             if guild_data["enabled"] and guild_data["post_time"]:
                 post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
                 print(post_time)
-                now = datetime.now().time()
+                now = datetime.now('UTC').time()
                 print(now)
-                print(now >= post_time, (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds())
-                if now >= post_time and (datetime.combine(datetime.now(), now) - datetime.combine(datetime.now(), post_time)).total_seconds() < 60:
+                print(now >= post_time, (datetime.combine(datetime.now('UTC'), now) - datetime.combine(datetime.now('UTC'), post_time)).total_seconds())
+                if now >= post_time and (datetime.combine(datetime.now('UTC'), now) - datetime.combine(datetime.now('UTC'), post_time)).total_seconds() < 60:
                     await self.post_quote(guild)
 
     @poster_task.before_loop
