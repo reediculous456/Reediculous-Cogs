@@ -150,6 +150,7 @@ class QuoteOfTheDay(commands.Cog):
     async def poster_task(self):
         for guild in self.bot.guilds:
             guild_data = await self.config.guild(guild).all()
+            print(guild_data)
             if guild_data["enabled"] and guild_data["post_time"]:
                 post_time = datetime.strptime(guild_data["post_time"], "%H:%M").time()
                 now = datetime.now().time()
