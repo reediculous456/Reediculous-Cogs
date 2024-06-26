@@ -58,15 +58,24 @@ class Verifier(commands.Cog):
                 await channel.send(f"{member.mention}, {self.forbidden_help_message}")
             return
 
-        if num_questions_to_ask and num_questions_to_ask < len(questions):
-            questions = random.sample(questions, num_questions_to_ask)
+        sticky_questions = [q for q in questions if q.get("sticky")]
+        non_sticky_questions = [q for q in questions if not q.get("sticky")]
+
+        if num_questions_to_ask:
+            if len(sticky_questions) > num_questions_to_ask:
+                questions_to_ask = sticky_questions
+            else:
+                num_additional_questions = num_questions_to_ask - len(sticky_questions)
+                questions_to_ask = sticky_questions + random.sample(non_sticky_questions, num_additional_questions)
+        else:
+            questions_to_ask = questions
 
         def check(m):
             return m.author == member and isinstance(m.channel, discord.DMChannel)
 
         try:
             await member.send("Welcome! Please answer the following questions correctly to gain access to the server. You have 90 seconds to answer each question.")
-            for q in questions:
+            for q in questions_to_ask:
                 await member.send(q["question"])
                 msg = await self.bot.wait_for('message', check=check, timeout=90.0)
                 normalized_response = self.normalize_answer(msg.content)
@@ -131,7 +140,7 @@ class Verifier(commands.Cog):
             await ctx.send_help('verifyset addquestion')
             return
         async with self.config.guild(ctx.guild).questions() as questions:
-            questions.append({"question": question, "answers": list(answers)})
+            questions.append({"question": question, "answers": list(answers), "sticky": False})
         await ctx.send("Question added.")
 
     @verifyset.command()
@@ -155,7 +164,7 @@ class Verifier(commands.Cog):
             return
         async with self.config.guild(ctx.guild).questions() as questions:
             if 0 < index <= len(questions):
-                questions[index - 1] = {"question": question, "answers": list(answers)}
+                questions[index - 1] = {"question": question, "answers": list(answers), "sticky": questions[index - 1].get("sticky", False)}
                 await ctx.send(f"Question {index} has been updated.")
             else:
                 await ctx.send("Invalid question index.")
@@ -168,7 +177,7 @@ class Verifier(commands.Cog):
             await ctx.send("No verification questions set.")
             return
 
-        question_list = "\n".join([f'{i+1}. Q: "{q["question"]}" A: {", ".join(q["answers"])}' for i, q in enumerate(questions)])
+        question_list = "\n".join([f'{i+1}. Q: "{q["question"]}" A: {", ".join(q["answers"])} (Sticky: {"Yes" if q.get("sticky") else "No"})' for i, q in enumerate(questions)])
         await ctx.send(f"Verification Questions:\n{question_list}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
 
     @verifyset.command()
@@ -200,3 +209,14 @@ class Verifier(commands.Cog):
           await self.config.guild(ctx.guild).num_questions_to_ask.set(num_questions)
 
         await ctx.send(f"The number of questions to ask during verification has been set to {num_questions}.")
+
+    @verifyset.command()
+    async def setstickyquestion(self, ctx: commands.Context, index: int, sticky: bool):
+        """Set whether a question is sticky or not by its index."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if 0 < index <= len(questions):
+                questions[index - 1]["sticky"] = sticky
+                status = "sticky" if sticky else "non-sticky"
+                await ctx.send(f"Question {index} has been marked as {status}.")
+            else:
+                await ctx.send("Invalid question index.")

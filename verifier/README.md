@@ -10,6 +10,7 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 - If the new member answers all questions correctly, they are assigned a specified role.
 - Includes a command for users to manually trigger the verification process.
 - Administrative commands for setting the role and managing the questions.
+- Support for "sticky" questions that are always asked first.
 
 ## Caveats
 
@@ -36,9 +37,12 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 - `[p]verifyset setverifiedrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset removequestion <index>`: Removes a question from the verification quiz by its index.
+- `[p]verifyset editquestion <index> "Question" "Answer"`: Edits a question in the verification quiz by its index.
 - `[p]verifyset listquestions`: Lists all verification questions. List is deleted after 60 seconds.
 - `[p]verifyset enabled true/false`: Enables or disables the verification process.
 - `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
+- `[p]verifyset setnumquestions <number>`: Sets the number of questions to ask during verification.
+- `[p]verifyset setstickyquestion <index> true/false`: Sets whether a question is sticky or not by its index. Sticky questions are always asked first, regardless of number of questions set.
 
 ## Usage
 
@@ -100,6 +104,16 @@ List all configured verification questions:
 [p]verifyset listquestions
 ```
 
+### Setting Sticky Questions
+
+Set a question as sticky or not by its index:
+
+```text
+[p]verifyset setstickyquestion 1 true
+```
+
+Replace 1 with the index of the question you want to set as sticky, and true with false to unset it as sticky.
+
 ### Manually Trigger Verification
 
 Users can manually trigger the verification process using the following command:
@@ -159,19 +173,25 @@ Enable or disable the verification process:
    [p]verifyset listquestions
    ```
 
-4. **Manual Verification**:
+4. **Set a Question as Sticky**:
+
+   ```text
+   [p]verifyset setstickyquestion 1 true
+   ```
+
+5. **Manual Verification**:
 
    ```text
    [p]verify
    ```
 
-5. **Enable/Disable Verification**:
+6. **Enable/Disable Verification**:
 
    ```text
    [p]verifyset enabled true
    ```
 
-6. **Optional: Kick on Fail**:
+7. **Optional: Kick on Fail**:
 
    ```text
     [p]verifyset setkickonfail true
