@@ -173,7 +173,7 @@ class QuoteOfTheDay(commands.Cog):
             await channel.send("No quotes available.")
             return
 
-        if len(posted_quotes) == len(quotes):
+        if len(posted_quotes) >= len(quotes):
             posted_quotes.clear()
 
         available_quotes = [q for q in quotes if q not in posted_quotes]
