@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta
 import discord
 import asyncio
 import re
 import random
 from redbot.core import commands, Config
 from discord.utils import get
+from discord.ext import tasks
 
 class Verifier(commands.Cog):
     """A cog that handles user verification with questions."""
@@ -21,9 +23,15 @@ class Verifier(commands.Cog):
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
-            "num_questions_to_ask": None
+            "num_questions_to_ask": None,
+            "verification_days_limit": None,
+            "unverified_role_id": None
         }
         self.config.register_guild(**default_guild)
+
+    def cog_unload(self):
+        if self.verification_expired_task.is_running():
+                self.verification_expired_task.cancel()
 
     async def get_prefix(self, member: discord.Member):
         # Retrieve the prefix for the guild
@@ -220,3 +228,58 @@ class Verifier(commands.Cog):
                 await ctx.send(f"Question {index} has been marked as {status}.")
             else:
                 await ctx.send("Invalid question index.")
+
+    async def kick_unverified_users(self, guild: discord.Guild):
+        """Lists and kicks users with a given role who joined more than 5 days ago."""
+        role_id = await self.config.guild(guild).unverified_role_id()
+        role = get(guild.roles, id=role_id)
+
+        verification_days_limit = await self.config.guild(guild).verification_days_limit()
+        verification_limit = datetime.utcnow() - timedelta(days=verification_days_limit)
+        members_to_kick = [
+            member for member in guild.members
+            if role in member.roles and member.joined_at < verification_limit
+        ]
+
+        for member in members_to_kick:
+            try:
+                await member.kick(reason=f"Did not verify within {verification_days_limit} days.")
+                await member.send(
+                    f"You have been kicked from the server because you took too long to verify your account. "
+                    f"Please re-join and verify within {verification_days_limit} days to avoid being kicked again."
+                )
+            except discord.Forbidden:
+                print(f"Failed to kick {member.name} due to missing permissions.")
+            except discord.HTTPException as e:
+                print(f"Failed to kick {member.name} due to an HTTP error: {e}")
+
+    @tasks.loop(days=1.0)
+    async def verification_expired_task(self):
+        for guild in self.bot.guilds:
+            self.kick_unverified_users(guild)
+
+    @verification_expired_task.before_loop
+    async def before_verification_expired(self):
+        await self.bot.wait_until_ready()
+
+    @verifyset.command()
+    async def setunverifiedrole(self, ctx: commands.Context, role: discord.Role):
+        """Set the role to be assigned to unverified users."""
+        if role is None:
+            await ctx.send_help('verifyset setunverifiedrole')
+            return
+        await self.config.guild(ctx.guild).unverified_role_id.set(role.id)
+        await ctx.send(f"The unverified role has been set to {role.name}.")
+
+    @verifyset.command()
+    async def setverificationdays(self, ctx: commands.Context, days: int | False):
+        """Set the number of days before unverified users are kicked."""
+        await self.config.guild(ctx.guild).verification_days_limit.set(days if days else None)
+        if days:
+            await ctx.send(f"Unverified users will be kicked if they don't verify within {days} days.")
+            if not self.verification_expired_task.is_running():
+                self.verification_expired_task.start()
+        else:
+            await ctx.send("Unverified users will not be kicked.")
+            if self.verification_expired_task.is_running():
+                self.verification_expired_task.cancel()
