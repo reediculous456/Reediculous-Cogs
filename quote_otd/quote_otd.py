@@ -174,9 +174,13 @@ class QuoteOfTheDay(commands.Cog):
             return
 
         if len(posted_quotes) >= len(quotes):
-            posted_quotes.clear()
+            posted_quotes = []
+            await self.config.guild(guild).posted_quotes.set(posted_quotes)
 
         available_quotes = [q for q in quotes if q not in posted_quotes]
+        if not available_quotes:
+            available_quotes = quotes  # Fallback in case of any unexpected issue
+
         quote = random.choice(available_quotes)
         posted_quotes.append(quote)
 
