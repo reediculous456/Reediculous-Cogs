@@ -34,14 +34,14 @@ class QuoteOfTheDay(commands.Cog):
         return
 
     @quoteotd.command()
-    async def add(self, ctx: commands.Context, *, quote: str):
+    async def add(self, ctx: commands.Context, quote: str):
         """Add a new quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
             quotes.append(quote)
         await ctx.send("Quote added.")
 
     @quoteotd.command()
-    async def remove(self, ctx: commands.Context, *, quote: str):
+    async def remove(self, ctx: commands.Context, quote: str):
         """Remove a quote."""
         async with self.config.guild(ctx.guild).quotes() as quotes:
             if quote in quotes:
@@ -51,7 +51,7 @@ class QuoteOfTheDay(commands.Cog):
                 await ctx.send("Quote not found.")
 
     @quoteotd.command()
-    async def bulkadd(self, ctx: commands.Context, *, quotes: str = None):
+    async def bulkadd(self, ctx: commands.Context, quotes: str = None):
         """Bulk add quotes separated by '|'. (Example: quote1 | quote2 | quote3) or you can upload a .txt file with quotes separated by new lines."""
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
