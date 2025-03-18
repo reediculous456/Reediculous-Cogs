@@ -38,11 +38,12 @@ class Verifier(commands.Cog):
 
     async def ask_questions(self, member: discord.Member, guild: discord.Guild, channel: discord.TextChannel):
         prefix = await self.get_prefix(member)
-        questions = await self.config.guild(guild).questions()
-        role_id = await self.config.guild(guild).role_id()
+        config = await self.config.guild(guild).all()
+        questions = config['questions']
+        role_id =config['role_id']
         role = get(guild.roles, id=role_id)
-        kick_on_fail = await self.config.guild(guild).kick_on_fail()
-        num_questions_to_ask = await self.config.guild(guild).num_questions_to_ask()
+        kick_on_fail =config['kick_on_fail']
+        num_questions_to_ask =config['num_questions_to_ask']
 
         if not role:
             try:
@@ -80,7 +81,7 @@ class Verifier(commands.Cog):
                 msg = await self.bot.wait_for('message', check=check, timeout=90.0)
                 normalized_response = self.normalize_answer(msg.content)
                 if not any(normalized_response == self.normalize_answer(answer) for answer in q["answers"]):
-                    if kick_on_fail:
+                    if kick_on_fail and guild.me.guild_permissions.kick_members:
                         await member.send("Incorrect answer. You have been removed from the server.")
                         await guild.kick(member)
                     else:
@@ -125,20 +126,14 @@ class Verifier(commands.Cog):
         return
 
     @verifyset.command()
-    async def setverifiedrole(self, ctx: commands.Context, role: discord.Role):
+    async def verifiedrole(self, ctx: commands.Context, role: discord.Role):
         """Set the role to be granted upon correct answers."""
-        if role is None:
-            await ctx.send_help('verifyset setverifiedrole')
-            return
         await self.config.guild(ctx.guild).role_id.set(role.id)
         await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
     async def addquestion(self, ctx: commands.Context, question: str, *answers: str):
         """Add a question to the verification quiz. Provide multiple answers separated by spaces."""
-        if question is None or not answers:
-            await ctx.send_help('verifyset addquestion')
-            return
         async with self.config.guild(ctx.guild).questions() as questions:
             questions.append({"question": question, "answers": list(answers), "sticky": False})
         await ctx.send("Question added.")
@@ -146,9 +141,6 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def removequestion(self, ctx: commands.Context, index: int):
         """Remove a question from the verification quiz by its index."""
-        if index is None:
-            await ctx.send_help('verifyset removequestion')
-            return
         async with self.config.guild(ctx.guild).questions() as questions:
             if 0 < index <= len(questions):
                 removed_question = questions.pop(index - 1)
@@ -159,9 +151,6 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def editquestion(self, ctx: commands.Context, index: int, question: str, *answers: str):
         """Edit a question in the verification quiz by its index."""
-        if index is None or question is None or not answers:
-            await ctx.send_help('verifyset editquestion')
-            return
         async with self.config.guild(ctx.guild).questions() as questions:
             if 0 < index <= len(questions):
                 questions[index - 1] = {"question": question, "answers": list(answers), "sticky": questions[index - 1].get("sticky", False)}
@@ -183,9 +172,6 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def setkickonfail(self, ctx: commands.Context, kick_on_fail: bool):
         """Enable or disable kicking the user on verification failure."""
-        if kick_on_fail is None:
-            await ctx.send_help('verifyset setkickonfail')
-            return
         await self.config.guild(ctx.guild).kick_on_fail.set(kick_on_fail)
         status = "enabled" if kick_on_fail else "disabled"
         await ctx.send(f"Kicking on verification failure has been {status}.")
@@ -193,15 +179,12 @@ class Verifier(commands.Cog):
     @verifyset.command()
     async def enabled(self, ctx: commands.Context, verification_enabled: bool):
         """Enable or disable the verification process."""
-        if verification_enabled is None:
-            await ctx.send_help('verifyset enabled')
-            return
         await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
         status = "enabled" if verification_enabled else "disabled"
         await ctx.send(f"Verification has been {status}.")
 
     @verifyset.command()
-    async def setnumquestions(self, ctx: commands.Context, num_questions: int | bool):
+    async def numquestions(self, ctx: commands.Context, num_questions: int | bool):
         """Set the number of questions to ask during verification. Use true to ask all questions."""
         if num_questions is True:
           await self.config.guild(ctx.guild).num_questions_to_ask.set(None)
@@ -211,7 +194,7 @@ class Verifier(commands.Cog):
         await ctx.send(f"The number of questions to ask during verification has been set to {num_questions}.")
 
     @verifyset.command()
-    async def setstickyquestion(self, ctx: commands.Context, index: int, sticky: bool):
+    async def stickyquestion(self, ctx: commands.Context, index: int, sticky: bool):
         """Set whether a question is sticky or not by its index."""
         async with self.config.guild(ctx.guild).questions() as questions:
             if 0 < index <= len(questions):
@@ -220,3 +203,7 @@ class Verifier(commands.Cog):
                 await ctx.send(f"Question {index} has been marked as {status}.")
             else:
                 await ctx.send("Invalid question index.")
+
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return

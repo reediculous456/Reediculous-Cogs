@@ -1,4 +1,5 @@
 from redbot.core import commands, Config
+from redbot.core.bot import Red
 import discord
 import random
 from datetime import datetime, time, timezone
@@ -8,9 +9,9 @@ import pytz
 class QuoteOfTheDay(commands.Cog):
     """Post a random quote to a specified channel at a specified time each day."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Red):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=2024061601)
+        self.config = Config.get_conf(self, identifier=2024061601, force_registration=True)
         default_guild = {
             "quotes": [],
             "posted_quotes": [],
@@ -24,13 +25,6 @@ class QuoteOfTheDay(commands.Cog):
 
     def cog_unload(self):
         self.poster_task.cancel()
-
-    async def get_prefix(self, member: discord.Member):
-        # Retrieve the prefix for the guild
-        prefixes = await self.bot.get_prefix(member)
-        if isinstance(prefixes, list):
-            return prefixes[0]
-        return prefixes
 
     @commands.group()
     @commands.guild_only()
@@ -58,7 +52,7 @@ class QuoteOfTheDay(commands.Cog):
 
     @quoteotd.command()
     async def bulkadd(self, ctx: commands.Context, *, quotes: str = None):
-        """Bulk add quotes separated by '|'. Example: quote1 | quote2 | quote3"""
+        """Bulk add quotes separated by '|'. (Example: quote1 | quote2 | quote3) or you can upload a .txt file with quotes separated by new lines."""
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
             if attachment.filename.endswith(".txt"):
@@ -78,8 +72,9 @@ class QuoteOfTheDay(commands.Cog):
 
         await ctx.send(f"Added {len(new_quotes)} quotes.")
 
+    # TODO: use a menu to display quotes
     @quoteotd.command()
-    async def list(self, ctx: commands.Context, page: int = 1):
+    async def list(self, ctx: commands.Context, page: commands.positive_int = 1):
         """List quotes in pages of 15 quotes."""
         quotes = await self.config.guild(ctx.guild).quotes()
         if not quotes:
@@ -96,6 +91,7 @@ class QuoteOfTheDay(commands.Cog):
         end = start + quotes_per_page
         quote_list = quotes[start:end]
         embed = discord.Embed(title=f"Quotes (Page {page}/{pages})")
+        embed.color = await ctx.embed_color()
         for idx, quote in enumerate(quote_list, start=start + 1):
             embed.add_field(name=f"Quote {idx}", value=discord.utils.escape_markdown(quote), inline=False)
 
@@ -108,11 +104,11 @@ class QuoteOfTheDay(commands.Cog):
         await ctx.send(f"Channel set to {channel.mention}.")
 
     @quoteotd.command()
-    async def settime(self, ctx: commands.Context, hour: int, minute: int):
+    async def settime(self, ctx: commands.Context, hour: commands.positive_int, minute: commands.positive_int):
         """Set the time to post quotes (24-hour format)."""
         timezone_str = await self.config.guild(ctx.guild).timezone()
         if not timezone_str:
-            prefix = await self.get_prefix(ctx.author)
+            prefix = ctx.prefix
             await ctx.send(f"Please set the guild's time zone first using `{prefix}quoteotd settimezone <timezone>`.")
             return
 
@@ -123,8 +119,10 @@ class QuoteOfTheDay(commands.Cog):
             utc_time = user_time.astimezone(pytz.utc).time()
             await self.config.guild(ctx.guild).post_time.set(utc_time.strftime("%H:%M"))
             await ctx.send(f"Post time set to {utc_time.strftime('%H:%M')} UTC.")
-        except Exception as e:
-            await ctx.send(f"Error: {e}")
+        except ValueError:
+            await ctx.send("Invalid time format. Please ensure the hour and minute are valid numbers.")
+        except pytz.UnknownTimeZoneError:
+            await ctx.send("The specified timezone is invalid. Please set a valid timezone first.")
 
     @quoteotd.command()
     async def settimezone(self, ctx: commands.Context, timezone: str):
@@ -139,9 +137,6 @@ class QuoteOfTheDay(commands.Cog):
     @quoteotd.command()
     async def enabled(self, ctx: commands.Context, enabled: bool):
         """Enable or disable the daily quote posting."""
-        if enabled is None:
-            await ctx.send_help(ctx.command)
-            return
         await self.config.guild(ctx.guild).enabled.set(enabled)
         status = "enabled" if enabled else "disabled"
         await ctx.send(f"Quote posting has been {status}.")
@@ -186,3 +181,7 @@ class QuoteOfTheDay(commands.Cog):
 
         await self.config.guild(guild).posted_quotes.set(posted_quotes)
         await channel.send(quote)
+
+    async def red_delete_data_for_user(self, **kwargs):
+        """Nothing to delete."""
+        return
