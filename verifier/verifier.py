@@ -41,10 +41,10 @@ class Verifier(commands.Cog):
         prefix = await self.get_prefix(member)
         config = await self.config.guild(guild).all()
         questions = config['questions']
-        role_id =config['role_id']
+        role_id = config['role_id']
         role = get(guild.roles, id=role_id)
-        kick_on_fail =config['kick_on_fail']
-        num_questions_to_ask =config['num_questions_to_ask']
+        kick_on_fail = config['kick_on_fail']
+        num_questions_to_ask = config['num_questions_to_ask']
 
         if not role:
             try:
