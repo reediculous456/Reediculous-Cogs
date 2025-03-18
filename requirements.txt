@@ -1,2 +1,3 @@
 discord==2.3.2
-Red-DiscordBot==3.5.9
+Red-DiscordBot==3.5.17
+pytz==2025.1
