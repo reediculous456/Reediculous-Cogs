@@ -34,15 +34,15 @@ The Verifier cog for Redbot provides a way to handle user verification with a se
 ### Admin Commands
 
 - `[p]verifyset`: Parent command for all verification settings.
-- `[p]verifyset setverifiedrole @RoleName`: Sets the role to be granted upon correct answers.
+- `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon correct answers.
 - `[p]verifyset addquestion "Question" "Answer"`: Adds a question to the verification quiz.
 - `[p]verifyset removequestion <index>`: Removes a question from the verification quiz by its index.
 - `[p]verifyset editquestion <index> "Question" "Answer"`: Edits a question in the verification quiz by its index.
 - `[p]verifyset listquestions`: Lists all verification questions. List is deleted after 60 seconds.
 - `[p]verifyset enabled true/false`: Enables or disables the verification process.
-- `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
-- `[p]verifyset setnumquestions <number>`: Sets the number of questions to ask during verification.
-- `[p]verifyset setstickyquestion <index> true/false`: Sets whether a question is sticky or not by its index. Sticky questions are always asked first, regardless of number of questions set.
+- `[p]verifyset kickonfail true/false`: Enables or disables kicking users on verification failure.
+- `[p]verifyset numquestions <number>`: Sets the number of questions to ask during verification.
+- `[p]verifyset stickyquestion <index> true/false`: Sets whether a question is sticky or not by its index. Sticky questions are always asked first, regardless of number of questions set.
 
 ## Usage
 
@@ -61,7 +61,7 @@ Replace `[p]` with your bot's command prefix.
 Set the role that will be granted upon successful verification:
 
 ```text
-[p]verifyset setverifiedrole @RoleName
+[p]verifyset verifiedrole @RoleName
 ```
 
 Replace `@RoleName` with the actual role you want to assign.
@@ -109,7 +109,7 @@ List all configured verification questions:
 Set a question as sticky or not by its index:
 
 ```text
-[p]verifyset setstickyquestion 1 true
+[p]verifyset stickyquestion 1 true
 ```
 
 Replace 1 with the index of the question you want to set as sticky, and true with false to unset it as sticky.
@@ -129,7 +129,7 @@ This command will only work if the user is not already verified and verification
 Set the number of questions to ask during the verification process:
 
 ```text
-[p]verifyset setnumquestions 3
+[p]verifyset numquestions 3
 ```
 
 You also can use `True` to ask all questions in the list.
@@ -139,8 +139,8 @@ You also can use `True` to ask all questions in the list.
 Enable or disable kicking users who fail the verification:
 
 ```text
-[p]verifyset setkickonfail true
-[p]verifyset setkickonfail false
+[p]verifyset kickonfail true
+[p]verifyset kickonfail false
 ```
 
 ### Enabling/Disabling Verification
@@ -157,7 +157,7 @@ Enable or disable the verification process:
 1. **Set the Verification Role**:
 
    ```text
-   [p]verifyset setverifiedrole @Verified
+   [p]verifyset verifiedrole @Verified
    ```
 
 2. **Add Questions**:
@@ -176,7 +176,7 @@ Enable or disable the verification process:
 4. **Set a Question as Sticky**:
 
    ```text
-   [p]verifyset setstickyquestion 1 true
+   [p]verifyset stickyquestion 1 true
    ```
 
 5. **Manual Verification**:
@@ -194,7 +194,7 @@ Enable or disable the verification process:
 7. **Optional: Kick on Fail**:
 
    ```text
-    [p]verifyset setkickonfail true
+    [p]verifyset kickonfail true
     ```
 
 ## Notes

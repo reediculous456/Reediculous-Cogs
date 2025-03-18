@@ -84,6 +84,19 @@ Example:
 [p]quoteotd bulkadd The best time to plant a tree was 20 years ago. The second best time is now. | It does not matter how slowly you go as long as you do not stop.
 ```
 
+### Bulk Add Quotes from File
+
+```text
+[p]quoteotd bulkadd <file>.txt
+```
+
+Example file content:
+
+```text
+The best time to plant a tree was 20 years ago. The second best time is now.
+It does not matter how slowly you go as long as you do not stop.
+```
+
 ### Set the Channel
 
 ```text
