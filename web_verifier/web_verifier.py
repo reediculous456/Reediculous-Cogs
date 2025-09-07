@@ -333,8 +333,8 @@ This link will expire in 30 minutes."""
     @verifyset.command()
     async def question(self, ctx: commands.Context, question_text: str, *answers: str):
         """Set the verification question."""
-        async with self.config.guild(ctx.guild).question() as question:
-            question.update({"question": question_text, "answers": list(answers)})
+        question_data = {"question": question_text, "answers": list(answers)}
+        await self.config.guild(ctx.guild).question.set(question_data)
         await ctx.send("Question added.")
 
     @verifyset.command()
