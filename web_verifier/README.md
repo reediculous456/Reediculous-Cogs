@@ -23,8 +23,8 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 ## Installation
 
 ```text
-[p]cog install reediculous456 web-verifier
-[p]load web-verifier
+[p]cog install reediculous456 web_verifier
+[p]load web_verifier
 ```
 
 ## Commands
@@ -56,7 +56,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 Load the Web Verifier cog using the bot's command in your Discord server:
 
 ```text
-[p]load web-verifier
+[p]load web_verifier
 ```
 
 Replace `[p]` with your bot's command prefix.

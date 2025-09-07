@@ -9,7 +9,7 @@ from redbot.core import commands, Config
 from redbot.core.bot import Red
 from discord.utils import get
 
-log = logging.getLogger("red.reediculous-cogs.web-verifier")
+log = logging.getLogger("red.reediculous-cogs.web_verifier")
 
 class WebVerifier(commands.Cog):
     """A cog that handles user verification with JWT tokens and web requests."""
