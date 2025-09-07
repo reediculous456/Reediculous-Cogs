@@ -23,7 +23,7 @@ class WebVerifier(commands.Cog):
             'On Mobile: click the server name, then scroll down and turn on "Allow Direct Messages"'
         )
         default_guild = {
-            "question": None,
+            "question": {},
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
@@ -193,7 +193,7 @@ class WebVerifier(commands.Cog):
                 await channel.send(f"{member.mention}, {self.forbidden_help_message}")
             return
 
-        if not question:
+        if not question or not question.get("question"):
             try:
                 await member.send(
                     "The admins of this server have enabled verification questions but have not set any questions. Please contact them to have this corrected."
@@ -355,7 +355,7 @@ This link will expire in 30 minutes."""
         role = get(ctx.guild.roles, id=config["role_id"]) if config["role_id"] else None
         role_name = role.name if role else "Not set"
 
-        question_text = config["question"]["question"] if config["question"] else "Not set"
+        question_text = config["question"].get("question", "Not set") if config["question"] else "Not set"
 
         embed = discord.Embed(title="Verification Settings", color=0x00ff00)
         embed.add_field(name="Enabled", value=config["verification_enabled"], inline=True)
@@ -391,7 +391,7 @@ This link will expire in 30 minutes."""
     async def showquestion(self, ctx: commands.Context):
         """Show the verification question."""
         question = await self.config.guild(ctx.guild).question()
-        if not question:
+        if not question or not question.get("question"):
             await ctx.send("No verification question set.")
             return
 
