@@ -1,5 +1,7 @@
 {
-  "author": "reedws",
+  "author": [
+    "reediculous456"
+  ],
   "description": "A Discord bot cog for verifying users via web requests and JWT tokens.",
   "name": "Web Verifier",
   "requirements": ["PyJWT", "aiohttp", "discord", "Red-DiscordBot"],
