@@ -331,10 +331,10 @@ This link will expire in 30 minutes."""
         await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
-    async def question(self, ctx: commands.Context, question: str, *answers: str):
+    async def question(self, ctx: commands.Context, question_text: str, *answers: str):
         """Set the verification question."""
         async with self.config.guild(ctx.guild).question() as question:
-            question.update({"question": question, "answers": list(answers)})
+            question.update({"question": question_text, "answers": list(answers)})
         await ctx.send("Question added.")
 
     @verifyset.command()
