@@ -48,6 +48,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyset viewmembers`: Lists all verified members and their member IDs.
 - `[p]verifyset checkuser @User`: Checks verification status of a specific user.
 - `[p]verifyset removemember @User`: Removes a user's verification record.
+- `[p]verifyset addmember @User <member_id>`: Manually verify a user with a specific member ID.
 
 ## Usage
 
@@ -116,6 +117,16 @@ Users can manually trigger the verification process:
 ```
 
 This command will only work if the user is not already verified and verification is enabled.
+
+### Manual Admin Verification
+
+Administrators can manually verify a user and assign them a member ID:
+
+```text
+[p]verifyset addmember @Username 12345
+```
+
+This will immediately grant the verified role and store the member ID for the user. The user will receive a DM notification if possible.
 
 ### Checking Configuration Status
 

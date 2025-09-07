@@ -325,6 +325,16 @@ This link will expire in 30 minutes."""
         return
 
     @verifyset.command()
+    async def addmember(self, ctx: commands.Context, user: discord.Member, member_id: str):
+        """Manually add a member's ID and verify them."""
+        async with self.config.guild(ctx.guild).verified_members() as verified_members:
+            verified_members[str(user.id)] = member_id
+
+        role_id = await self.config.guild(ctx.guild).role_id()
+        role = get(ctx.guild.roles, id=role_id)
+        await ctx.send(f"{user.display_name} has been manually verified with member ID: {member_id}.")
+
+    @verifyset.command()
     async def verifiedrole(self, ctx: commands.Context, role: discord.Role):
         """Set the role to be granted upon verification."""
         await self.config.guild(ctx.guild).role_id.set(role.id)
