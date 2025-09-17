@@ -318,7 +318,7 @@ This link will expire in 30 minutes."""
             await ctx.send("You have been unverified.")
 
     @commands.group()
-    @commands.admin_or_permissions(manage_channels=True)
+    @commands.admin()
     @commands.guild_only()
     async def verifyset(self, ctx: commands.Context) -> None:
         """Sets verification module settings."""

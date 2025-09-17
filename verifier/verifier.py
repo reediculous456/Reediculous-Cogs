@@ -120,7 +120,7 @@ class Verifier(commands.Cog):
             await self.ask_questions(member, ctx.guild, ctx.channel)
 
     @commands.group()
-    @commands.admin_or_permissions(manage_channels=True)
+    @commands.admin()
     @commands.guild_only()
     async def verifyset(self, ctx: commands.Context) -> None:
         """Sets verification module settings."""

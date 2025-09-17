@@ -28,7 +28,7 @@ class QuoteOfTheDay(commands.Cog):
 
     @commands.group()
     @commands.guild_only()
-    @commands.admin_or_permissions(administrator=True)
+    @commands.admin()
     async def quoteotd(self, ctx: commands.Context):
         """Group of commands to manage quote posting."""
         return
