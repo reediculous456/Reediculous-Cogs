@@ -290,20 +290,48 @@ This link will expire in 30 minutes."""
     @commands.guild_only()
     @commands.command()
     async def unverify(self, ctx: commands.Context):
-        """Unlink your discord account from your member ID and remove the verified role."""
+        """Warn user they will be kicked, confirm with reactions, then kick and unverify."""
         member = ctx.author
         role_id = await self.config.guild(ctx.guild).role_id()
         role = get(ctx.guild.roles, id=role_id) if role_id else None
         verified_members = await self.config.guild(ctx.guild).verified_members()
         if str(member.id) not in verified_members:
             await ctx.send("You are not verified.")
-        else:
-            if role and role in member.roles:
-                await member.remove_roles(role)
-            async with self.config.guild(ctx.guild).verified_members() as verified_members:
-                if str(member.id) in verified_members:
-                    del verified_members[str(member.id)]
-            await ctx.send("You have been unverified.")
+            return
+
+        # Warn and ask for confirmation
+        confirm_msg = await ctx.send(
+            f"{member.mention}, if you continue, you will be kicked from the server and unverified. React with ✅ to confirm or ❌ to cancel.")
+        await confirm_msg.add_reaction("✅")
+        await confirm_msg.add_reaction("❌")
+
+        def check(reaction, user):
+            return (
+                user == member and reaction.message.id == confirm_msg.id and str(reaction.emoji) in ["✅", "❌"]
+            )
+        try:
+            reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30.0)
+        except asyncio.TimeoutError:
+            await ctx.send("Unverify cancelled due to timeout.")
+            return
+
+        if str(reaction.emoji) == "❌":
+            await ctx.send("Unverify cancelled.")
+            return
+
+        # Remove role and unverify
+        if role and role in member.roles:
+            await member.remove_roles(role)
+        async with self.config.guild(ctx.guild).verified_members() as verified_members:
+            if str(member.id) in verified_members:
+                del verified_members[str(member.id)]
+
+        # Kick the member
+        try:
+            await member.kick(reason="User requested verification removal.")
+            await ctx.send(f"{member.display_name} has been unverified and kicked from the server.")
+        except discord.Forbidden:
+            await ctx.send("Failed to kick the user due to missing permissions, but they have been unverified.")
 
     @commands.group()
     @commands.admin()
