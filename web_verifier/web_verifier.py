@@ -116,14 +116,15 @@ class WebVerifier(commands.Cog):
                 verified_members[str(user_id)] = member_id
 
             # Grant the verified role
-            role_id = await self.config.guild(guild).role_id()
-            role = get(guild.roles, id=role_id)
+                role_id = await self.config.guild(guild).role_id()
+                role = get(guild.roles, id=role_id) if role_id else None
 
-            if role:
-                await member.add_roles(role)
+                if role:
+                    await member.add_roles(role)
+
                 try:
                     await member.send(
-                        f"Congratulations! You have been verified with member ID: {member_id}"
+                        f"Congratulations! You have been verified with member ID: {member_id}. It may take a few minutes for your access to be updated in the server."
                     )
                 except discord.Forbidden:
                     pass  # Can't send DM
@@ -132,8 +133,6 @@ class WebVerifier(commands.Cog):
                     text=f"Successfully verified {username} (ID: {user_id}) with member ID: {member_id}",
                     status=200,
                 )
-            else:
-                return web.Response(text="Verification role not configured", status=500)
 
         except jwt.ExpiredSignatureError:
             return web.Response(text="JWT token has expired", status=401)
@@ -180,18 +179,8 @@ class WebVerifier(commands.Cog):
         config = await self.config.guild(guild).all()
         question = config["question"]
         role_id = config["role_id"]
-        role = get(guild.roles, id=role_id)
         kick_on_fail = config["kick_on_fail"]
         verification_url = config["verification_url"]
-
-        if not role:
-            try:
-                await member.send(
-                    "The admins of this server have enabled verification questions but have not set the role to be granted upon correct answers. Please contact them to have this corrected."
-                )
-            except discord.Forbidden:
-                await channel.send(f"{member.mention}, {self.forbidden_help_message}")
-            return
 
         if not question or not question.get("question"):
             try:
@@ -291,10 +280,9 @@ This link will expire in 30 minutes."""
             return
 
         member = ctx.author
-        role_id = await self.config.guild(ctx.guild).role_id()
-        role = get(ctx.guild.roles, id=role_id)
+        verified_members = await self.config.guild(ctx.guild).verified_members()
 
-        if role in member.roles:
+        if str(member.id) in verified_members:
             await ctx.send("You are already verified.")
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
@@ -305,12 +293,12 @@ This link will expire in 30 minutes."""
         """Unlink your discord account from your member ID and remove the verified role."""
         member = ctx.author
         role_id = await self.config.guild(ctx.guild).role_id()
-        role = get(ctx.guild.roles, id=role_id)
-
-        if role and role not in member.roles:
+        role = get(ctx.guild.roles, id=role_id) if role_id else None
+        verified_members = await self.config.guild(ctx.guild).verified_members()
+        if str(member.id) not in verified_members:
             await ctx.send("You are not verified.")
         else:
-            if role:
+            if role and role in member.roles:
                 await member.remove_roles(role)
             async with self.config.guild(ctx.guild).verified_members() as verified_members:
                 if str(member.id) in verified_members:
