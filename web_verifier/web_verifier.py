@@ -122,6 +122,9 @@ class WebVerifier(commands.Cog):
                 if role:
                     await member.add_roles(role)
 
+                # Dispatch verification event
+                self.bot.dispatch('member_verified', guild, member, member_id)
+
                 try:
                     await member.send(
                         f"Congratulations! You have been verified with member ID: {member_id}. It may take a few minutes for your access to be updated in the server."
@@ -348,6 +351,14 @@ This link will expire in 30 minutes."""
 
         role_id = await self.config.guild(ctx.guild).role_id()
         role = get(ctx.guild.roles, id=role_id)
+
+        # Grant the verified role if it exists
+        if role:
+            await user.add_roles(role)
+
+        # Dispatch verification event
+        self.bot.dispatch('member_verified', ctx.guild, user, member_id)
+
         await ctx.send(f"{user.display_name} has been manually verified with member ID: {member_id}.")
 
     @verifyset.command()
