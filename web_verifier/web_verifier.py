@@ -357,7 +357,9 @@ This link will expire in 30 minutes."""
             await user.add_roles(role)
 
         # Dispatch verification event
+        print(f"About to dispatch member_verified event: guild={ctx.guild}, member={user}, member_id={member_id}")
         self.bot.dispatch('member_verified', ctx.guild, user, member_id)
+        print("Dispatch completed")
 
         await ctx.send(f"{user.display_name} has been manually verified with member ID: {member_id}.")
 
