@@ -67,7 +67,13 @@ class WebVerifier(commands.Cog):
 
     async def handle_verification(self, request):
         """Handle incoming verification requests with JWT tokens."""
-        jwt_token = request.query.get("jwt")
+        try:
+            # Get JWT from POST request body
+            data = await request.json()
+            jwt_token = data.get("jwt")
+        except Exception:
+            # Fallback to query parameter if JSON parsing fails
+            jwt_token = request.query.get("jwt")
 
         if not jwt_token:
             return web.Response(text="Missing JWT token", status=400)
