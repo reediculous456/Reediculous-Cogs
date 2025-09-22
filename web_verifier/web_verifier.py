@@ -50,7 +50,7 @@ class WebVerifier(commands.Cog):
             self.web_app.router.add_post("/discord-auth/return", self.handle_verification)
             self.web_runner = web.AppRunner(self.web_app)
             await self.web_runner.setup()
-            site = web.TCPSite(self.web_runner, "localhost", 8080)
+            site = web.TCPSite(self.web_runner, "0.0.0.0", 8080)
             await site.start()
             log.info("Verification web server started on http://localhost:8080")
         except Exception as e:
