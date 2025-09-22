@@ -180,7 +180,7 @@ View current verification settings and any configuration warnings:
 3. **Set Question and Answers**:
 
    ```text
-   [p]verifyset question "What is your member ID?" 12345 67890 98765
+   [p]verifyset question "What is the meaning of life?" 42 "forty-two" "forty two"
    ```
 
 4. **Set Verification URL**:
@@ -223,9 +223,9 @@ View current verification settings and any configuration warnings:
 
 ```json
 {
-  "user_id": 123456789,
-  "username": "User#1234",
-  "guild_id": 987654321,
+  "user_id": "123456789",
+  "username": "SomeUser",
+  "guild_id": "987654321",
   "exp": 1234567890,
   "iat": 1234567890
 }
@@ -235,21 +235,14 @@ View current verification settings and any configuration warnings:
 
 ```json
 {
-  "user_id": 123456789,
-  "username": "User#1234",
-  "guild_id": 987654321,
+  "user_id": "123456789",
+  "username": "SomeUser",
+  "guild_id": "987654321",
   "exp": 1234567890,
   "iat": 1234567890,
   "member_id": "user_provided_member_id"
 }
 ```
-
-## Requirements
-
-- PyJWT==2.8.0
-- aiohttp==3.8.6
-- discord==2.3.2
-- Red-DiscordBot==3.5.17
 
 ## Notes
 
