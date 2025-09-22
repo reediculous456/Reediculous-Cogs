@@ -135,7 +135,7 @@ class WebVerifier(commands.Cog):
 
                 return web.Response(
                     text=f"Successfully verified {username} (ID: {user_id}) with member ID: {member_id}",
-                    status=200,
+                    status=201,
                 )
 
         except jwt.ExpiredSignatureError:
