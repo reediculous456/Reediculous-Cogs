@@ -167,6 +167,7 @@ class WebVerifier(commands.Cog):
             "iat": int(time.time()),
         }
 
+        log.info(f"Generating JWT for user {member.id} in guild {guild.name} ({guild.id})")
         token = jwt.encode(payload, secret, algorithm="HS256")
         return token
 
