@@ -90,7 +90,9 @@ class WebVerifier(commands.Cog):
             try:
                 user_id = int(decoded_payload.get("user_id"))
                 guild_id = int(guild_id)
+                log.info(f"Extracted from JWT: user_id={user_id}, guild_id={guild_id}, username={decoded_payload.get('username')}")
             except (ValueError, TypeError):
+                log.error(f"Failed to convert IDs to integers: user_id={decoded_payload.get('user_id')}, guild_id={guild_id}")
                 return web.Response(text="Invalid user_id or guild_id in JWT", status=400)
 
             username = decoded_payload.get("username")
@@ -107,7 +109,10 @@ class WebVerifier(commands.Cog):
             # Find the guild and user
             guild = self.bot.get_guild(guild_id)
             if not guild:
-                return web.Response(text="Guild not found", status=404)
+                # Debug: Log available guilds to help diagnose the issue
+                available_guilds = [f"{g.name} ({g.id})" for g in self.bot.guilds]
+                log.error(f"Guild not found. Requested guild_id: {guild_id} (type: {type(guild_id)}). Available guilds: {available_guilds}")
+                return web.Response(text=f"Guild not found. Guild ID: {guild_id}", status=404)
 
             member = guild.get_member(user_id)
             if not member:
