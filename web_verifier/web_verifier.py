@@ -86,7 +86,13 @@ class WebVerifier(commands.Cog):
                 return web.Response(text="Invalid JWT token", status=401)
 
             # Extract data from JWT - member_id should be in the payload now
-            user_id = decoded_payload.get("user_id")
+            # Convert IDs to integers to ensure compatibility with discord.py
+            try:
+                user_id = int(decoded_payload.get("user_id"))
+                guild_id = int(guild_id)
+            except (ValueError, TypeError):
+                return web.Response(text="Invalid user_id or guild_id in JWT", status=400)
+
             username = decoded_payload.get("username")
             member_id = decoded_payload.get("member_id")
 
