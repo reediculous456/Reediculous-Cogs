@@ -70,6 +70,7 @@ class WebVerifier(commands.Cog):
         try:
             # Get JWT from POST request body
             data = await request.json()
+            print(data)
             jwt_token = data.get("jwt")
         except Exception:
             # Fallback to query parameter if JSON parsing fails
