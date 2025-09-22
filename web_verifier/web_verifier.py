@@ -367,7 +367,7 @@ This link will expire in 30 minutes."""
         # Dispatch verification event
         self.bot.dispatch('member_verified', ctx.guild, user, member_id)
 
-        await ctx.send(f"{user.display_name} has been manually verified with member ID: {member_id}.")
+        await ctx.send(f"{user.name} has been manually verified with member ID: {member_id}.")
 
     @verifyset.command()
     async def verifiedrole(self, ctx: commands.Context, role: discord.Role):
