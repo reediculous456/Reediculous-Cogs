@@ -160,9 +160,9 @@ class WebVerifier(commands.Cog):
             raise ValueError("JWT secret not configured. Please set a secret using the setsecret command.")
 
         payload = {
-            "user_id": member.id,
+            "user_id": str(member.id),
             "username": str(member),
-            "guild_id": guild.id,
+            "guild_id": str(guild.id),
             "exp": int(time.time()) + 1800,  # 30 minutes expiration
             "iat": int(time.time()),
         }
@@ -170,11 +170,11 @@ class WebVerifier(commands.Cog):
         log.info(f"Generating JWT for user {member.id} in guild {guild.name} ({guild.id})")
         log.info(f"Payload being encoded: {payload}")
         token = jwt.encode(payload, secret, algorithm="HS256")
-        
+
         # Decode immediately to verify what's actually in the token
         decoded_check = jwt.decode(token, secret, algorithms=["HS256"])
         log.info(f"Decoded verification: {decoded_check}")
-        
+
         return token
 
     async def get_prefix(self, member: discord.Member):
