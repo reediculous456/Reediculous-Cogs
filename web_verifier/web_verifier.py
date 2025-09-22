@@ -517,7 +517,13 @@ This link will expire in 30 minutes."""
                     f"{user.display_name} is not in the verified members list."
                 )
 
-    @verifyset.command()
+    @commands.group()
+    @commands.is_owner()
+    async def verifyconfig(self, ctx: commands.Context) -> None:
+        """Verifier settings and commands."""
+        pass
+
+    @verifyconfig.command()
     @commands.is_owner()
     async def setsecret(self, ctx: commands.Context, *, secret: str):
         """Set the JWT secret for verification tokens (global setting).
