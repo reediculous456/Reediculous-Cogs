@@ -17,7 +17,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 
 - This cog does not stop users from interacting with your server. The intent is that you lock all desired functionality behind the assigned verification role.
 - Requires an external web service to handle the verification interface and submit verification results.
-- JWT secrets must be at least 24 characters long for security.
+- JWT secrets must be at least 32 characters long for security.
 - Verification tokens expire after 30 minutes.
 
 ## Installation
@@ -34,21 +34,24 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verify`: Manually triggers the verification process if the user is not already verified.
 - `[p]unverify`: Removes verification status and role from the user.
 
-### Admin Commands
+### Admin Commands (Guild-level)
 
 - `[p]verifyset`: Parent command for all verification settings.
+- `[p]verifyset addmember @User <member_id>`: Manually verify a user with a specific member ID.
 - `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon verification.
 - `[p]verifyset question "Question" answer1 answer2`: Sets the verification question and accepted answers.
 - `[p]verifyset url <URL>`: Sets the base URL for the external verification service.
-- `[p]verifyset setsecret <secret>`: Sets the JWT secret (minimum 24 characters).
-- `[p]verifyset enabled true/false`: Enables or disables the verification process.
-- `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 - `[p]verifyset status`: Shows current verification configuration and warnings.
 - `[p]verifyset showquestion`: Shows the current verification question (deleted after 60 seconds).
+- `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
+- `[p]verifyset enabled true/false`: Enables or disables the verification process.
 - `[p]verifyset viewmembers`: Lists all verified members and their member IDs.
 - `[p]verifyset checkuser @User`: Checks verification status of a specific user.
 - `[p]verifyset removemember @User`: Removes a user's verification record.
-- `[p]verifyset addmember @User <member_id>`: Manually verify a user with a specific member ID.
+
+### Owner Commands (Bot-wide)
+
+- `[p]verifyconfig setsecret <secret>`: Sets the JWT secret (minimum 32 characters, global setting).
 
 ## Usage
 
@@ -74,13 +77,13 @@ Replace `@Verified` with the actual role you want to assign.
 
 ### Setting the JWT Secret
 
-Set a secure JWT secret (minimum 24 characters):
+Set a secure JWT secret (minimum 32 characters):
 
 ```text
-[p]verifyset setsecret your_super_secure_secret_key_here_123456789
+[p]verifyconfig setsecret your_super_secure_secret_key_here_123456789
 ```
 
-This secret will be used to sign and verify JWT tokens.
+This secret will be used to sign and verify JWT tokens. Note that this is a bot-wide setting that requires bot owner permissions.
 
 ### Setting the Verification Question
 
@@ -171,7 +174,7 @@ View current verification settings and any configuration warnings:
 2. **Set JWT Secret**:
 
    ```text
-   [p]verifyset setsecret my_very_secure_jwt_secret_key_123456789
+   [p]verifyconfig setsecret my_very_secure_jwt_secret_key_123456789
    ```
 
 3. **Set Question and Answers**:
@@ -252,7 +255,7 @@ View current verification settings and any configuration warnings:
 
 - Ensure the bot has the necessary permissions to send DMs and manage roles in your server.
 - The web server starts automatically when the cog loads.
-- JWT secrets must be at least 24 characters long for security.
+- JWT secrets must be at least 32 characters long for security.
 - Verification URLs expire after 30 minutes for security.
 - If no verification role, question, or JWT secret is set, the bot will notify users to contact administrators.
 - Your external verification service must sign the enhanced JWT with the same secret.

@@ -411,7 +411,7 @@ This link will expire in 30 minutes."""
 
         # Enhanced JWT secret status
         jwt_secret = await self.config.jwt_secret()
-        secret_status = "✅ Configured" if jwt_secret and len(jwt_secret) >= 24 else "❌ Not set or too short"
+        secret_status = "✅ Configured" if jwt_secret and len(jwt_secret) >= 32 else "❌ Not set or too short"
         embed.add_field(name="JWT Secret", value=secret_status, inline=True)
 
         verified_count = len(config["verified_members"])
@@ -419,7 +419,7 @@ This link will expire in 30 minutes."""
 
         # Add warnings for incomplete configuration
         warnings = []
-        if not jwt_secret or len(jwt_secret) < 24:
+        if not jwt_secret or len(jwt_secret) < 32:
             warnings.append("⚠️ JWT secret not configured or too short")
         if not config["question"]:
             warnings.append("⚠️ Verification question not set")
@@ -528,11 +528,11 @@ This link will expire in 30 minutes."""
     async def setsecret(self, ctx: commands.Context, *, secret: str):
         """Set the JWT secret for verification tokens (global setting).
 
-        The secret must be at least 24 characters long for security.
+        The secret must be at least 32 characters long for security.
         This will invalidate all existing verification tokens across all servers.
         """
-        if len(secret) < 24:
-            await ctx.send("❌ JWT secret must be at least 24 characters long for security.")
+        if len(secret) < 32:
+            await ctx.send("❌ JWT secret must be at least 32 characters long for security.")
             return
 
         await self.config.jwt_secret.set(secret)
