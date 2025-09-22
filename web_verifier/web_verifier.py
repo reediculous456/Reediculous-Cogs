@@ -168,7 +168,13 @@ class WebVerifier(commands.Cog):
         }
 
         log.info(f"Generating JWT for user {member.id} in guild {guild.name} ({guild.id})")
+        log.info(f"Payload being encoded: {payload}")
         token = jwt.encode(payload, secret, algorithm="HS256")
+        
+        # Decode immediately to verify what's actually in the token
+        decoded_check = jwt.decode(token, secret, algorithms=["HS256"])
+        log.info(f"Decoded verification: {decoded_check}")
+        
         return token
 
     async def get_prefix(self, member: discord.Member):
