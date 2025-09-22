@@ -47,6 +47,7 @@ class WebVerifier(commands.Cog):
         """Start the aiohttp web server for handling verification requests."""
         try:
             self.web_app = web.Application()
+            self.web_app.router.add_get("/", lambda request: web.Response(text="You do not have access to this page!"))
             self.web_app.router.add_post("/discord-auth/return", self.handle_verification)
             self.web_runner = web.AppRunner(self.web_app)
             await self.web_runner.setup()
