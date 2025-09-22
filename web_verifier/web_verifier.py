@@ -27,11 +27,14 @@ class WebVerifier(commands.Cog):
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
-            "jwt_secret": None,
             "verification_url": "",
             "verified_members": {},  # Store user_id -> member_id mappings
         }
+        default_global = {
+            "jwt_secret": None,
+        }
         self.config.register_guild(**default_guild)
+        self.config.register_global(**default_global)
         self.web_app = None
         self.web_runner = None
 
@@ -70,22 +73,14 @@ class WebVerifier(commands.Cog):
             return web.Response(text="Missing JWT token", status=400)
 
         try:
-            # We need to find which guild this token belongs to by trying all guild secrets
-            decoded_payload = None
-            guild_id = None
-
-            for guild in self.bot.guilds:
-                try:
-                    secret = await self.config.guild(guild).jwt_secret()
-                    if secret:
-                        decoded_payload = jwt.decode(
-                            jwt_token, secret, algorithms=["HS256"]
-                        )
-                        guild_id = decoded_payload.get("guild_id")
-                        if guild_id == guild.id:
-                            break
-                except jwt.InvalidTokenError:
-                    continue
+            secret = await self.config.jwt_secret()
+            try:
+                decoded_payload = jwt.decode(
+                    jwt_token, secret, algorithms=["HS256"]
+                )
+                guild_id = decoded_payload.get("guild_id")
+            except jwt.InvalidTokenError:
+                return web.Response(text="Invalid JWT token", status=401)
 
             if not decoded_payload or not guild_id:
                 return web.Response(text="Invalid JWT token", status=401)
@@ -149,7 +144,7 @@ class WebVerifier(commands.Cog):
         self, member: discord.Member, guild: discord.Guild
     ):
         """Generate a JWT token for verification."""
-        secret = await self.config.guild(guild).jwt_secret()
+        secret = await self.config.jwt_secret()
         if not secret:
             raise ValueError("JWT secret not configured. Please set a secret using the setsecret command.")
 
@@ -403,7 +398,8 @@ This link will expire in 30 minutes."""
         embed.add_field(name="Question", value=question_text, inline=False)
 
         # Enhanced JWT secret status
-        secret_status = "✅ Configured" if config["jwt_secret"] and len(config["jwt_secret"]) >= 24 else "❌ Not set or too short"
+        jwt_secret = await self.config.jwt_secret()
+        secret_status = "✅ Configured" if jwt_secret and len(jwt_secret) >= 24 else "❌ Not set or too short"
         embed.add_field(name="JWT Secret", value=secret_status, inline=True)
 
         verified_count = len(config["verified_members"])
@@ -411,7 +407,7 @@ This link will expire in 30 minutes."""
 
         # Add warnings for incomplete configuration
         warnings = []
-        if not config["jwt_secret"] or len(config["jwt_secret"]) < 24:
+        if not jwt_secret or len(jwt_secret) < 24:
             warnings.append("⚠️ JWT secret not configured or too short")
         if not config["question"]:
             warnings.append("⚠️ Verification question not set")
@@ -510,17 +506,18 @@ This link will expire in 30 minutes."""
                 )
 
     @verifyset.command()
+    @commands.is_owner()
     async def setsecret(self, ctx: commands.Context, *, secret: str):
-        """Set the JWT secret for verification tokens.
+        """Set the JWT secret for verification tokens (global setting).
 
         The secret must be at least 24 characters long for security.
-        This will invalidate all existing verification tokens.
+        This will invalidate all existing verification tokens across all servers.
         """
         if len(secret) < 24:
             await ctx.send("❌ JWT secret must be at least 24 characters long for security.")
             return
 
-        await self.config.guild(ctx.guild).jwt_secret.set(secret)
+        await self.config.jwt_secret.set(secret)
         await ctx.send(
             "✅ JWT secret has been set successfully. All existing verification tokens are now invalid."
         )
