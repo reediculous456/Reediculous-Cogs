@@ -27,10 +27,10 @@ class WebVerifier(commands.Cog):
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
-            "verification_url": "",
             "verified_members": {},  # Store user_id -> member_id mappings
         }
         default_global = {
+            "verification_url": "",
             "jwt_secret": None,
             "port": 8080,  # Default port for the web server
         }
@@ -193,7 +193,7 @@ class WebVerifier(commands.Cog):
         question = config["question"]
         role_id = config["role_id"]
         kick_on_fail = config["kick_on_fail"]
-        verification_url = config["verification_url"]
+        verification_url = await self.config.verification_url()
 
         if not question or not question.get("question"):
             try:
@@ -385,16 +385,6 @@ This link will expire in 30 minutes."""
         await ctx.send("Question added.")
 
     @verifyset.command()
-    async def url(self, ctx: commands.Context, url: str):
-        """Set the verification URL base (where users will be sent for verification)."""
-        if not url.startswith(('http://', 'https://')):
-            await ctx.send("URL must start with http:// or https://")
-            return
-
-        await self.config.guild(ctx.guild).verification_url.set(url)
-        await ctx.send(f"The verification URL has been set to: {url}")
-
-    @verifyset.command()
     async def status(self, ctx: commands.Context):
         """View current verification settings."""
         config = await self.config.guild(ctx.guild).all()
@@ -408,7 +398,9 @@ This link will expire in 30 minutes."""
         embed.add_field(name="Enabled", value=config["verification_enabled"], inline=True)
         embed.add_field(name="Verified Role", value=role_name, inline=True)
         embed.add_field(name="Kick on Fail", value=config["kick_on_fail"], inline=True)
-        embed.add_field(name="Verification URL", value=config["verification_url"] or "Not set", inline=False)
+
+        verification_url = await self.config.verification_url()
+        embed.add_field(name="Verification URL", value=verification_url or "Not set", inline=False)
         embed.add_field(name="Question", value=question_text, inline=False)
 
         # Enhanced JWT secret status
@@ -427,7 +419,7 @@ This link will expire in 30 minutes."""
             warnings.append("⚠️ Verification question not set")
         if not config["role_id"]:
             warnings.append("⚠️ Verified role not set")
-        if not config["verification_url"]:
+        if not verification_url:
             warnings.append("⚠️ Verification URL not set")
 
         if warnings:
@@ -553,6 +545,16 @@ This link will expire in 30 minutes."""
 
         await self.config.port.set(port)
         await ctx.send(f"✅ Verification web server port has been set to {port}. Please restart the bot for the change to take effect.")
+
+    @verifyconfig.command()
+    async def url(self, ctx: commands.Context, url: str):
+        """Set the verification URL base (where users will be sent for verification)."""
+        if not url.startswith(('http://', 'https://')):
+            await ctx.send("URL must start with http:// or https://")
+            return
+
+        await self.config.verification_url.set(url)
+        await ctx.send(f"The verification URL has been set to: {url}")
 
     async def red_delete_data_for_user(self, **kwargs):
         """Delete user data when requested."""
