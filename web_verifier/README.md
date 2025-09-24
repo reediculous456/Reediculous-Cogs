@@ -52,6 +52,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 ### Owner Commands (Bot-wide)
 
 - `[p]verifyconfig setsecret <secret>`: Sets the JWT secret (minimum 32 characters, global setting).
+- `[p]verifyconfig setport <port>`: Sets the port for the verification web server (global setting).
 
 ## Usage
 

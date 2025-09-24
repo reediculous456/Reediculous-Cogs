@@ -32,6 +32,7 @@ class WebVerifier(commands.Cog):
         }
         default_global = {
             "jwt_secret": None,
+            "port": 8080,  # Default port for the web server
         }
         self.config.register_guild(**default_guild)
         self.config.register_global(**default_global)
@@ -54,9 +55,10 @@ class WebVerifier(commands.Cog):
             self.web_app.router.add_post("/discord-auth/return", self.handle_verification)
             self.web_runner = web.AppRunner(self.web_app)
             await self.web_runner.setup()
-            site = web.TCPSite(self.web_runner, "0.0.0.0", 8080)
+            port = await self.config.port()
+            site = web.TCPSite(self.web_runner, "0.0.0.0", port)
             await site.start()
-            log.info("Verification web server started on http://localhost:8080")
+            log.info(f"Verification web server started on http://localhost:{port}")
         except Exception as e:
             log.error(f"Failed to start verification web server: {e}")
 
@@ -524,7 +526,6 @@ This link will expire in 30 minutes."""
         pass
 
     @verifyconfig.command()
-    @commands.is_owner()
     async def setsecret(self, ctx: commands.Context, *, secret: str):
         """Set the JWT secret for verification tokens (global setting).
 
@@ -539,6 +540,19 @@ This link will expire in 30 minutes."""
         await ctx.send(
             "✅ JWT secret has been set successfully. All existing verification tokens are now invalid."
         )
+
+    @verifyconfig.command()
+    async def setport(self, ctx: commands.Context, port: int):
+        """Set the port for the verification web server (global setting).
+
+        The port must be between 1024 and 65535.
+        """
+        if port < 1024 or port > 65535:
+            await ctx.send("❌ Port must be between 1024 and 65535.")
+            return
+
+        await self.config.port.set(port)
+        await ctx.send(f"✅ Verification web server port has been set to {port}. Please restart the bot for the change to take effect.")
 
     async def red_delete_data_for_user(self, **kwargs):
         """Delete user data when requested."""
