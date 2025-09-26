@@ -250,7 +250,6 @@ class WebVerifier(commands.Cog):
         prefix = await self.get_prefix(member)
         config = await self.config.guild(guild).all()
         question = config["question"]
-        role_id = config["role_id"]
         kick_on_fail = config["kick_on_fail"]
         verification_url = await self.config.verification_url()
 
@@ -334,6 +333,12 @@ This link will expire in 30 minutes."""
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        """Trigger verification process when a member joins if enabled."""
+        verified_members = await self.config.verified_members()
+        if str(member.id) in verified_members:
+            self.bot.dispatch('member_verified', member.guild, member, verified_members[str(member.id)])
+            return
+
         verification_enabled = await self.config.guild(
             member.guild
         ).verification_enabled()
