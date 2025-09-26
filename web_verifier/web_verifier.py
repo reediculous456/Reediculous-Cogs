@@ -392,10 +392,10 @@ This link will expire in 30 minutes."""
             )
         try:
             reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30.0)
-            confirm_msg.delete()
+            await confirm_msg.delete()
         except asyncio.TimeoutError:
             await ctx.send("Unverify cancelled due to timeout.")
-            confirm_msg.delete()
+            await confirm_msg.delete()
             return
 
         if str(reaction.emoji) == "❌":
