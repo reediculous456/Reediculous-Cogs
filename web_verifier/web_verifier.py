@@ -364,10 +364,9 @@ This link will expire in 30 minutes."""
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
 
-    @commands.guild_only()
     @commands.command()
     async def unverify(self, ctx: commands.Context):
-        """Warn user they will be kicked, confirm with reactions, then kick and unverify."""
+        """Warn user they will be kicked, confirm with reactions, then kick and unverify. This is intended for is a user is no longer using a discord account."""
         member = ctx.author
         verified_members = await self.config.verified_members()
         if str(member.id) not in verified_members:
