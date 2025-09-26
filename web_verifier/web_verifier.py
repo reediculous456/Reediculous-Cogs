@@ -39,40 +39,8 @@ class WebVerifier(commands.Cog):
         self.web_app = None
         self.web_runner = None
 
-    async def migrate_verified_members(self):
-        """Migrate verified members from guild-level to global config."""
-        global_verified = await self.config.verified_members()
-
-        # If global config already has data, skip migration
-        if global_verified:
-            return
-
-        log.info("Migrating verified members from guild-level to global config...")
-        migrated_count = 0
-
-        for guild in self.bot.guilds:
-            try:
-                # Check if guild has the old verified_members config
-                guild_config = await self.config.guild(guild).all()
-                if "verified_members" in guild_config and guild_config["verified_members"]:
-                    # Merge guild verified members into global config
-                    for user_id, member_id in guild_config["verified_members"].items():
-                        if user_id not in global_verified:
-                            global_verified[user_id] = member_id
-                            migrated_count += 1
-
-                    # Clear the guild-level verified_members to avoid confusion
-                    await self.config.guild(guild).clear_raw("verified_members")
-            except Exception as e:
-                log.error(f"Error migrating verified members from guild {guild.id}: {e}")
-
-        if migrated_count > 0:
-            await self.config.verified_members.set(global_verified)
-            log.info(f"Successfully migrated {migrated_count} verified members to global config")
-
     async def cog_load(self):
         """Start the web server when the cog loads."""
-        await self.migrate_verified_members()
         await self.start_web_server()
 
     async def cog_unload(self):
