@@ -157,7 +157,7 @@ class WebVerifier(commands.Cog):
             async with self.config.verified_members() as verified_members:
                 verified_members[str(user_id)] = member_id
 
-            self.complete_verification(guild, member, member_id)
+            await self.complete_verification(guild, member, member_id)
 
             # Grant the verified role in ALL other servers where this user exists and verification is enabled
             servers_updated = [guild.name]
@@ -362,7 +362,7 @@ This link will expire in 30 minutes."""
         verified_members = await self.config.verified_members()
 
         if str(member.id) in verified_members:
-            self.complete_verification(ctx.guild, member, verified_members[str(member.id)])
+            await self.complete_verification(ctx.guild, member, verified_members[str(member.id)])
             await ctx.send("You are already verified.")
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
