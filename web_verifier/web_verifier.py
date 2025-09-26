@@ -157,12 +157,7 @@ class WebVerifier(commands.Cog):
             async with self.config.verified_members() as verified_members:
                 verified_members[str(user_id)] = member_id
 
-            # Grant the verified role in the originating guild
-            role_id = await self.config.guild(guild).role_id()
-            role = get(guild.roles, id=role_id) if role_id else None
-
-            if role:
-                await member.add_roles(role)
+            self.complete_verification(guild, member, member_id)
 
             # Grant the verified role in ALL other servers where this user exists and verification is enabled
             servers_updated = [guild.name]
@@ -191,9 +186,6 @@ class WebVerifier(commands.Cog):
                     except discord.Forbidden:
                         log.warning(f"Could not grant verified role to {username} in {other_guild.name} - missing permissions")
 
-            # Dispatch verification event for original guild
-            self.bot.dispatch('member_verified', guild, member, member_id)
-
             try:
                 await member.send(
                     f"Congratulations! You have been verified with member ID: {member_id}. It may take a few minutes for your access to be updated."
@@ -212,6 +204,16 @@ class WebVerifier(commands.Cog):
             return web.Response(text="Invalid JWT token", status=401)
         except Exception as e:
             return web.Response(text=f"Server error: {str(e)}", status=500)
+
+    async def complete_verification(self, guild: discord.Guild, member: discord.Member, member_id: str):
+        # Grant the verified role in the originating guild
+        role_id = await self.config.guild(guild).role_id()
+        role = get(guild.roles, id=role_id) if role_id else None
+
+        if role:
+            await member.add_roles(role)
+
+        self.bot.dispatch('member_verified', guild, member, member_id)
 
     async def generate_verification_jwt(
         self, member: discord.Member, guild: discord.Guild
@@ -334,15 +336,15 @@ This link will expire in 30 minutes."""
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         """Trigger verification process when a member joins if enabled."""
-        verified_members = await self.config.verified_members()
-        if str(member.id) in verified_members:
-            self.bot.dispatch('member_verified', member.guild, member, verified_members[str(member.id)])
-            return
-
         verification_enabled = await self.config.guild(
             member.guild
         ).verification_enabled()
         if verification_enabled:
+            verified_members = await self.config.verified_members()
+            if str(member.id) in verified_members:
+                self.bot.dispatch('member_verified', member.guild, member, verified_members[str(member.id)])
+                return
+
             await self.ask_question_and_generate_url(
                 member, member.guild, member.guild.system_channel
             )
@@ -360,6 +362,7 @@ This link will expire in 30 minutes."""
         verified_members = await self.config.verified_members()
 
         if str(member.id) in verified_members:
+            self.complete_verification(ctx.guild, member, verified_members[str(member.id)])
             await ctx.send("You are already verified.")
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
@@ -605,11 +608,12 @@ This link will expire in 30 minutes."""
             role_id = await self.config.guild(guild).role_id()
             role = get(guild.roles, id=role_id) if role_id else None
 
+            self.bot.dispatch('member_verified', guild, guild_member, member_id)
+
             if role and role not in guild_member.roles:
                 try:
                     await guild_member.add_roles(role)
                     # Dispatch verification event for each server
-                    self.bot.dispatch('member_verified', guild, guild_member, member_id)
                 except discord.Forbidden:
                     pass  # Ignore permission errors
 
