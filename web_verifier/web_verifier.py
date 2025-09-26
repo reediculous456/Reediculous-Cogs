@@ -27,20 +27,52 @@ class WebVerifier(commands.Cog):
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
-            "verified_members": {},  # Store user_id -> member_id mappings
         }
         default_global = {
             "verification_url": "",
             "jwt_secret": None,
             "port": 8080,  # Default port for the web server
+            "verified_members": {},  # Store user_id -> member_id mappings (now global)
         }
         self.config.register_guild(**default_guild)
         self.config.register_global(**default_global)
         self.web_app = None
         self.web_runner = None
 
+    async def migrate_verified_members(self):
+        """Migrate verified members from guild-level to global config."""
+        global_verified = await self.config.verified_members()
+
+        # If global config already has data, skip migration
+        if global_verified:
+            return
+
+        log.info("Migrating verified members from guild-level to global config...")
+        migrated_count = 0
+
+        for guild in self.bot.guilds:
+            try:
+                # Check if guild has the old verified_members config
+                guild_config = await self.config.guild(guild).all()
+                if "verified_members" in guild_config and guild_config["verified_members"]:
+                    # Merge guild verified members into global config
+                    for user_id, member_id in guild_config["verified_members"].items():
+                        if user_id not in global_verified:
+                            global_verified[user_id] = member_id
+                            migrated_count += 1
+
+                    # Clear the guild-level verified_members to avoid confusion
+                    await self.config.guild(guild).clear_raw("verified_members")
+            except Exception as e:
+                log.error(f"Error migrating verified members from guild {guild.id}: {e}")
+
+        if migrated_count > 0:
+            await self.config.verified_members.set(global_verified)
+            log.info(f"Successfully migrated {migrated_count} verified members to global config")
+
     async def cog_load(self):
         """Start the web server when the cog loads."""
+        await self.migrate_verified_members()
         await self.start_web_server()
 
     async def cog_unload(self):
@@ -122,30 +154,57 @@ class WebVerifier(commands.Cog):
                 return web.Response(text="Member not found", status=404)
 
             # Save the member ID for this user
-            async with self.config.guild(guild).verified_members() as verified_members:
+            async with self.config.verified_members() as verified_members:
                 verified_members[str(user_id)] = member_id
 
-            # Grant the verified role
-                role_id = await self.config.guild(guild).role_id()
-                role = get(guild.roles, id=role_id) if role_id else None
+            # Grant the verified role in the originating guild
+            role_id = await self.config.guild(guild).role_id()
+            role = get(guild.roles, id=role_id) if role_id else None
 
-                if role:
-                    await member.add_roles(role)
+            if role:
+                await member.add_roles(role)
 
-                # Dispatch verification event
-                self.bot.dispatch('member_verified', guild, member, member_id)
+            # Grant the verified role in ALL other servers where this user exists and verification is enabled
+            servers_updated = [guild.name]
+            for other_guild in self.bot.guilds:
+                if other_guild.id == guild.id:
+                    continue  # Skip the originating guild
 
-                try:
-                    await member.send(
-                        f"Congratulations! You have been verified with member ID: {member_id}. It may take a few minutes for your access to be updated in the server."
-                    )
-                except discord.Forbidden:
-                    pass  # Can't send DM
+                other_member = other_guild.get_member(user_id)
+                if not other_member:
+                    continue  # User not in this server
 
-                return web.Response(
-                    text=f"Successfully verified {username} (ID: {user_id}) with member ID: {member_id}",
-                    status=201,
+                verification_enabled = await self.config.guild(other_guild).verification_enabled()
+                if not verification_enabled:
+                    continue  # Verification not enabled in this server
+
+                other_role_id = await self.config.guild(other_guild).role_id()
+                other_role = get(other_guild.roles, id=other_role_id) if other_role_id else None
+
+                servers_updated.append(other_guild.name)
+                # Dispatch verification event for this server too
+                self.bot.dispatch('member_verified', other_guild, other_member, member_id)
+
+                if other_role and other_role not in other_member.roles:
+                    try:
+                        await other_member.add_roles(other_role)
+                    except discord.Forbidden:
+                        log.warning(f"Could not grant verified role to {username} in {other_guild.name} - missing permissions")
+
+            # Dispatch verification event for original guild
+            self.bot.dispatch('member_verified', guild, member, member_id)
+
+            try:
+                await member.send(
+                    f"Congratulations! You have been verified with member ID: {member_id}. It may take a few minutes for your access to be updated."
                 )
+            except discord.Forbidden:
+                pass  # Can't send DM
+
+            return web.Response(
+                text=f"Successfully verified {username} (ID: {user_id}) with member ID: {member_id}",
+                status=201,
+            )
 
         except jwt.ExpiredSignatureError:
             return web.Response(text="JWT token has expired", status=401)
@@ -293,7 +352,7 @@ This link will expire in 30 minutes."""
             return
 
         member = ctx.author
-        verified_members = await self.config.guild(ctx.guild).verified_members()
+        verified_members = await self.config.verified_members()
 
         if str(member.id) in verified_members:
             await ctx.send("You are already verified.")
@@ -305,16 +364,20 @@ This link will expire in 30 minutes."""
     async def unverify(self, ctx: commands.Context):
         """Warn user they will be kicked, confirm with reactions, then kick and unverify."""
         member = ctx.author
-        role_id = await self.config.guild(ctx.guild).role_id()
-        role = get(ctx.guild.roles, id=role_id) if role_id else None
-        verified_members = await self.config.guild(ctx.guild).verified_members()
+        verified_members = await self.config.verified_members()
         if str(member.id) not in verified_members:
             await ctx.send("You are not verified.")
             return
 
+        total_guilds = 0
+        for guild in self.bot.guilds:
+            guild_member = guild.get_member(member.id)
+            if guild_member:
+                total_guilds += 1
+
         # Warn and ask for confirmation
         confirm_msg = await ctx.send(
-            f"{member.mention}, if you continue, you will be kicked from the server and unverified. React with ✅ to confirm or ❌ to cancel.")
+            f"{member.mention}, if you continue, you will be kicked from {total_guilds} servers and unverified. React with ✅ to confirm or ❌ to cancel.")
         await confirm_msg.add_reaction("✅")
         await confirm_msg.add_reaction("❌")
 
@@ -324,27 +387,62 @@ This link will expire in 30 minutes."""
             )
         try:
             reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30.0)
+            confirm_msg.delete()
         except asyncio.TimeoutError:
             await ctx.send("Unverify cancelled due to timeout.")
+            confirm_msg.delete()
             return
 
         if str(reaction.emoji) == "❌":
             await ctx.send("Unverify cancelled.")
             return
 
-        # Remove role and unverify
-        if role and role in member.roles:
-            await member.remove_roles(role)
-        async with self.config.guild(ctx.guild).verified_members() as verified_members:
-            if str(member.id) in verified_members:
-                del verified_members[str(member.id)]
+        # Remove role from ALL servers and kick from current server
+        servers_processed = []
+        kicked_from = []
+        not_kicked_from = []
 
-        # Kick the member
-        try:
-            await member.kick(reason="User requested verification removal.")
-            await ctx.send(f"{member.display_name} has been unverified and kicked from the server.")
-        except discord.Forbidden:
-            await ctx.send("Failed to kick the user due to missing permissions, but they have been unverified.")
+        # Remove from global verified members first
+        async with self.config.verified_members() as global_verified:
+            if str(member.id) in global_verified:
+                del global_verified[str(member.id)]
+
+        # Remove verified role from all servers where user exists
+        for guild in self.bot.guilds:
+            guild_member = guild.get_member(member.id)
+            if not guild_member:
+                continue
+
+            verification_enabled = await self.config.guild(guild).verification_enabled()
+            if not verification_enabled:
+                continue
+
+            role_id = await self.config.guild(guild).role_id()
+            role = get(guild.roles, id=role_id) if role_id else None
+
+            if role and role in guild_member.roles:
+                try:
+                    await guild_member.remove_roles(role)
+                    servers_processed.append(guild.name)
+                except discord.Forbidden:
+                    pass  # Ignore permission errors
+
+            try:
+                await guild_member.kick(reason="User requested verification removal.")
+                kicked_from.append(guild.name)
+            except discord.Forbidden:
+                not_kicked_from.append(guild.name)
+                pass  # Ignore permission errors
+
+        status_msg = f"{member.display_name} has been unverified"
+        if servers_processed:
+            status_msg += f" and removed from verified role in: {', '.join(servers_processed)}"
+        if kicked_from:
+            status_msg += f" and kicked from: {', '.join(kicked_from)}"
+        else:
+            status_msg += f" but could not be kicked from: {', '.join(not_kicked_from)} due to missing permissions"
+
+        await ctx.send(status_msg + ".")
 
     @commands.group()
     @commands.admin()
@@ -352,24 +450,6 @@ This link will expire in 30 minutes."""
     async def verifyset(self, ctx: commands.Context) -> None:
         """Sets verification module settings."""
         return
-
-    @verifyset.command()
-    async def addmember(self, ctx: commands.Context, user: discord.Member, member_id: str):
-        """Manually add a member's ID and verify them."""
-        async with self.config.guild(ctx.guild).verified_members() as verified_members:
-            verified_members[str(user.id)] = member_id
-
-        role_id = await self.config.guild(ctx.guild).role_id()
-        role = get(ctx.guild.roles, id=role_id)
-
-        # Grant the verified role if it exists
-        if role:
-            await user.add_roles(role)
-
-        # Dispatch verification event
-        self.bot.dispatch('member_verified', ctx.guild, user, member_id)
-
-        await ctx.send(f"{user.name} has been manually verified with member ID: {member_id}.")
 
     @verifyset.command()
     async def verifiedrole(self, ctx: commands.Context, role: discord.Role):
@@ -408,7 +488,8 @@ This link will expire in 30 minutes."""
         secret_status = "✅ Configured" if jwt_secret and len(jwt_secret) >= 32 else "❌ Not set or too short"
         embed.add_field(name="JWT Secret", value=secret_status, inline=True)
 
-        verified_count = len(config["verified_members"])
+        global_verified_members = await self.config.verified_members()
+        verified_count = len(global_verified_members)
         embed.add_field(name="Verified Members", value=verified_count, inline=True)
 
         # Add warnings for incomplete configuration
@@ -453,16 +534,141 @@ This link will expire in 30 minutes."""
         await ctx.send(f"Verification has been {status}.")
 
     @verifyset.command()
+    async def checkuser(self, ctx: commands.Context, user: discord.Member):
+        """Check if a user is globally verified and show their member ID."""
+        verified_members = await self.config.verified_members()
+        user_id = str(user.id)
+
+        if user_id in verified_members:
+            if ctx.guild.get_member(user.id) is None:
+                await ctx.send(f"{user.display_name} is not a member of this server.")
+                return
+
+            member_id = verified_members[user_id]
+            role_id = await self.config.guild(ctx.guild).role_id()
+
+            if role_id:
+                role = get(ctx.guild.roles, id=role_id)
+                has_role = role in user.roles if role else False
+
+            # Check how many servers this user has verified role in
+            verified_servers = []
+            for guild in self.bot.guilds:
+                guild_member = guild.get_member(user.id)
+                if not guild_member:
+                    continue
+
+                verification_enabled = await self.config.guild(guild).verification_enabled()
+                if not verification_enabled:
+                    continue
+
+                verified_servers.append(guild.name)
+
+            embed = discord.Embed(title="User Verification Status", color=0x00ff00)
+            embed.add_field(name="User", value=user.mention, inline=True)
+            embed.add_field(name="Member ID", value=member_id, inline=True)
+            if role_id:
+                embed.add_field(name="Has Role (This Server)", value=has_role, inline=True)
+            embed.add_field(name="Verified Servers", value=f"{len(verified_servers)} servers" if verified_servers else "None", inline=True)
+            if verified_servers:
+                embed.add_field(name="Server Names", value=", ".join(verified_servers), inline=False)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f"{user.display_name} is not verified.")
+
+    @commands.group()
+    @commands.is_owner()
+    async def verifyconfig(self, ctx: commands.Context) -> None:
+        """Verifier settings and commands."""
+        pass
+
+    @verifyconfig.command()
+    async def addmember(self, ctx: commands.Context, user: discord.Member, member_id: str):
+        """Manually add a member's ID and verify them."""
+        async with self.config.verified_members() as verified_members:
+            verified_members[str(user.id)] = member_id
+
+        # Grant the verified role in ALL servers where this user exists and verification is enabled
+        for guild in self.bot.guilds:
+            guild_member = guild.get_member(user.id)
+            if not guild_member:
+                continue
+
+            verification_enabled = await self.config.guild(guild).verification_enabled()
+            if not verification_enabled:
+                continue
+
+            role_id = await self.config.guild(guild).role_id()
+            role = get(guild.roles, id=role_id) if role_id else None
+
+            if role and role not in guild_member.roles:
+                try:
+                    await guild_member.add_roles(role)
+                    # Dispatch verification event for each server
+                    self.bot.dispatch('member_verified', guild, guild_member, member_id)
+                except discord.Forbidden:
+                    pass  # Ignore permission errors
+
+        await ctx.send(f"{user.name} has been manually verified with member ID: {member_id}.")
+
+    @verifyconfig.command()
+    async def removemember(self, ctx: commands.Context, user: discord.Member):
+        """Remove a member's global verification record and roles from all servers."""
+        verified_members = await self.config.verified_members()
+        if str(user.id) not in verified_members:
+            await ctx.send(f"{user.display_name} is not in the global verified members list.")
+            return
+
+        # Remove from global verified members
+        async with self.config.verified_members() as global_verified:
+            del global_verified[str(user.id)]
+
+        # Remove verified role from all servers where user exists
+        servers_processed = []
+        for guild in self.bot.guilds:
+            guild_member = guild.get_member(user.id)
+            if not guild_member:
+                continue
+
+            verification_enabled = await self.config.guild(guild).verification_enabled()
+            if not verification_enabled:
+                continue
+
+            role_id = await self.config.guild(guild).role_id()
+            role = get(guild.roles, id=role_id) if role_id else None
+
+            if role and role in guild_member.roles:
+                try:
+                    await guild_member.remove_roles(role)
+                    servers_processed.append(guild.name)
+                except discord.Forbidden:
+                    pass  # Ignore permission errors
+
+        status_msg = f"Removed verification record for {user.display_name}"
+        if servers_processed:
+            status_msg += f" and removed verified role from {len(servers_processed)} server(s): {', '.join(servers_processed)}"
+
+        await ctx.send(status_msg + ".")
+
+    @verifyconfig.command()
     async def viewmembers(self, ctx: commands.Context):
         """View all verified members and their member IDs."""
-        verified_members = await self.config.guild(ctx.guild).verified_members()
+        verified_members = await self.config.verified_members()
         if not verified_members:
             await ctx.send("No verified members found.")
             return
 
         member_list = []
         for user_id, member_id in verified_members.items():
+            # Try to find the member in the current guild first, then any guild
             member = ctx.guild.get_member(int(user_id))
+            if not member:
+                # Look for the member in other guilds
+                for guild in self.bot.guilds:
+                    member = guild.get_member(int(user_id))
+                    if member:
+                        break
+
             if member:
                 member_list.append(
                     f"{member.display_name} ({member.id}): Member ID {member_id}"
@@ -471,51 +677,13 @@ This link will expire in 30 minutes."""
                 member_list.append(f"Unknown User ({user_id}): Member ID {member_id}")
 
         if member_list:
-            message = "Verified Members:\n" + "\n".join(member_list)
+            message = f"Verified Members ({len(member_list)} total):\n" + "\n".join(member_list)
             # Split long messages
             if len(message) > 2000:
                 for i in range(0, len(message), 1900):
                     await ctx.send(message[i : i + 1900])
             else:
                 await ctx.send(message)
-
-    @verifyset.command()
-    async def checkuser(self, ctx: commands.Context, user: discord.Member):
-        """Check if a user is verified and show their member ID."""
-        verified_members = await self.config.guild(ctx.guild).verified_members()
-        user_id = str(user.id)
-
-        if user_id in verified_members:
-            member_id = verified_members[user_id]
-            role_id = await self.config.guild(ctx.guild).role_id()
-            role = get(ctx.guild.roles, id=role_id)
-            has_role = role in user.roles if role else False
-
-            embed = discord.Embed(title="User Verification Status", color=0x00ff00)
-            embed.add_field(name="User", value=user.mention, inline=True)
-            embed.add_field(name="Member ID", value=member_id, inline=True)
-            embed.add_field(name="Has Verified Role", value=has_role, inline=True)
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"{user.display_name} is not verified.")
-
-    @verifyset.command()
-    async def removemember(self, ctx: commands.Context, user: discord.Member):
-        """Remove a member's verification record."""
-        async with self.config.guild(ctx.guild).verified_members() as verified_members:
-            if str(user.id) in verified_members:
-                del verified_members[str(user.id)]
-                await ctx.send(f"Removed verification record for {user.display_name}.")
-            else:
-                await ctx.send(
-                    f"{user.display_name} is not in the verified members list."
-                )
-
-    @commands.group()
-    @commands.is_owner()
-    async def verifyconfig(self, ctx: commands.Context) -> None:
-        """Verifier settings and commands."""
-        pass
 
     @verifyconfig.command()
     async def setsecret(self, ctx: commands.Context, *, secret: str):
@@ -560,10 +728,7 @@ This link will expire in 30 minutes."""
         """Delete user data when requested."""
         user_id = kwargs.get("user_id")
         if user_id:
-            # Remove user from all guild verification records
-            for guild in self.bot.guilds:
-                async with self.config.guild(
-                    guild
-                ).verified_members() as verified_members:
-                    if str(user_id) in verified_members:
-                        del verified_members[str(user_id)]
+            # Remove user from verification records
+            async with self.config.verified_members() as verified_members:
+                if str(user_id) in verified_members:
+                    del verified_members[str(user_id)]

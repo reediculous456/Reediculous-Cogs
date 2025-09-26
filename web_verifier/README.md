@@ -4,6 +4,8 @@
 
 The Web Verifier cog for Redbot provides a JWT-based verification system that integrates with external web services. Users must answer a verification question correctly, then complete verification through an external website. This cog includes a built-in web server and secure token management for seamless integration with your verification infrastructure.
 
+**Global Verification**: When a user verifies in one server, they are automatically verified across all servers where the bot is present and verification is enabled.
+
 ## Features
 
 - Automatically sends a verification question to new members via DM upon joining the server.
@@ -37,22 +39,22 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 ### Admin Commands (Guild-level)
 
 - `[p]verifyset`: Parent command for all verification settings.
-- `[p]verifyset addmember @User <member_id>`: Manually verify a user with a specific member ID.
 - `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon verification.
 - `[p]verifyset question "Question" answer1 answer2`: Sets the verification question and accepted answers.
-- `[p]verifyset url <URL>`: Sets the base URL for the external verification service.
 - `[p]verifyset status`: Shows current verification configuration and warnings.
 - `[p]verifyset showquestion`: Shows the current verification question (deleted after 60 seconds).
 - `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 - `[p]verifyset enabled true/false`: Enables or disables the verification process.
-- `[p]verifyset viewmembers`: Lists all verified members and their member IDs.
-- `[p]verifyset checkuser @User`: Checks verification status of a specific user.
-- `[p]verifyset removemember @User`: Removes a user's verification record.
+- `[p]verifyset checkuser @User`: Checks global verification status of a specific user.
 
 ### Owner Commands (Bot-wide)
 
 - `[p]verifyconfig setsecret <secret>`: Sets the JWT secret (minimum 32 characters, global setting).
 - `[p]verifyconfig setport <port>`: Sets the port for the verification web server (global setting).
+- `[p]verifyconfig url <URL>`: Sets the base URL for the external verification service (global setting).
+- `[p]verifyconfig addmember @User <member_id>`: Manually verify a user globally with a specific member ID.
+- `[p]verifyconfig viewmembers`: Lists all globally verified members and their member IDs.
+- `[p]verifyconfig removemember @User`: Removes a user's global verification record.
 
 ## Usage
 
@@ -101,7 +103,7 @@ Replace with your desired question and valid answers.
 Set the base URL for your external verification service:
 
 ```text
-[p]verifyset url https://your-verification-site.com/verify
+[p]verifyconfig url https://your-verification-site.com/verify
 ```
 
 ### Enabling Verification
@@ -124,13 +126,13 @@ This command will only work if the user is not already verified and verification
 
 ### Manual Admin Verification
 
-Administrators can manually verify a user and assign them a member ID:
+Bot owners can manually verify a user globally and assign them a member ID:
 
 ```text
-[p]verifyset addmember @Username 12345
+[p]verifyconfig addmember @Username 12345
 ```
 
-This will immediately grant the verified role and store the member ID for the user. The user will receive a DM notification if possible.
+This will immediately grant the verified role across all servers where the bot is present, verification is enabled, and a verified role is configured. The user will receive a DM notification if possible.
 
 ### Checking Configuration Status
 
@@ -162,7 +164,7 @@ View current verification settings and any configuration warnings:
    ```
 
 5. **External service processes verification** and sends enhanced JWT back to bot
-6. **Bot validates token, stores member ID, and grants role**
+6. **Bot validates token, stores member ID globally, and grants role across all applicable servers**
 
 ## Example Configuration
 
@@ -187,7 +189,7 @@ View current verification settings and any configuration warnings:
 4. **Set Verification URL**:
 
    ```text
-   [p]verifyset url https://your-verification-site.com/verify
+   [p]verifyconfig url https://your-verification-site.com/verify
    ```
 
 5. **Enable Verification**:
@@ -215,8 +217,9 @@ View current verification settings and any configuration warnings:
 - **Web Server**: Runs on localhost:8080 by default
 - **JWT Algorithm**: HS256
 - **Token Expiration**: 30 minutes
-- **Security**: Each guild has its own JWT secret
-- **Storage**: Member IDs are stored in the bot's config system
+- **Security**: Bot-wide JWT secret for all servers
+- **Storage**: Member IDs are stored globally in the bot's config system
+- **Global Verification**: Users verified in one server are automatically verified in all other servers
 
 ## JWT Integration
 
