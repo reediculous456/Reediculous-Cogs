@@ -59,6 +59,8 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyconfig addmember @User <member_id>`: Manually verify a user globally with a specific member ID.
 - `[p]verifyconfig viewmembers`: Lists all globally verified members and their member IDs.
 - `[p]verifyconfig removemember @User`: Removes a user's global verification record.
+- `[p]verifyconfig incorrectanswers [limit]`: View logged incorrect answers grouped by normalized form with statistics (default limit: 20).
+- `[p]verifyconfig clearincorrectanswers`: Clear all logged incorrect answers (requires confirmation).
 
 ## Usage
 
@@ -240,6 +242,47 @@ View current verification settings and any configuration warnings:
    [p]verifyset setkickonfail true
    ```
 
+## Incorrect Answer Logging
+
+The Web Verifier cog automatically logs all incorrect answers provided during the verification process. This feature helps administrators identify common mistakes, potential confusion points, or suspicious verification attempts.
+
+### Logging Features
+
+- **Normalized Grouping**: Answers are grouped by their normalized form (spaces and special characters removed, case-insensitive) to identify similar responses.
+- **Statistics Tracking**: Each incorrect answer group tracks:
+
+  - Total number of attempts
+  - Number of unique users who provided this answer
+  - Original forms of the answer (preserving exact user input)
+  - First and last seen timestamps
+
+- **Admin Commands**: Bot owners can view and manage the incorrect answer logs.
+
+### Viewing Incorrect Answers
+
+Use the `incorrectanswers` command to view logged incorrect responses:
+
+```text
+[p]verifyconfig incorrectanswers 10
+```
+
+This displays the top 10 most common incorrect answers with statistics including:
+
+- Number of attempts and unique users
+- Time since last occurrence
+- Original forms of the answer as typed by users
+- Normalized form used for grouping
+
+### Managing Logs
+
+Bot owners can clear the incorrect answer logs when needed:
+
+```text
+[p]verifyconfig clearincorrectanswers
+```
+
+This command requires confirmation and will permanently delete all logged incorrect answers.
+
 ## Technical Details
 
 - **Main Class**: `WebVerifier`
@@ -250,6 +293,7 @@ View current verification settings and any configuration warnings:
 - **Security**: Bot-wide JWT secret for all servers
 - **Storage**: Member IDs are stored globally in the bot's config system
 - **Global Verification**: Users verified in one server are automatically verified in all other servers
+- **Incorrect Answer Logging**: Stores normalized incorrect answers with grouping and statistics
 
 ## JWT Integration
 

@@ -34,6 +34,7 @@ class WebVerifier(commands.Cog):
             "jwt_secret": None,
             "port": 8080,  # Default port for the web server
             "verified_members": {},  # Store user_id -> member_id mappings (now global)
+            "incorrect_answers": {},  # Store normalized incorrect answers with counts and timestamps
         }
         self.config.register_guild(**default_guild)
         self.config.register_global(**default_global)
@@ -214,6 +215,29 @@ class WebVerifier(commands.Cog):
         """Normalize the answer by removing spaces and converting to lowercase."""
         return re.sub(r"[^a-zA-Z0-9]", "", answer).lower()
 
+    async def log_incorrect_answer(self, user_id: int, guild_id: int, original_answer: str, normalized_answer: str):
+        """Log an incorrect answer with normalized grouping and timestamp."""
+        async with self.config.incorrect_answers() as incorrect_answers:
+            # Use normalized answer as the key for grouping
+            if normalized_answer not in incorrect_answers:
+                incorrect_answers[normalized_answer] = {
+                    "count": 0,
+                    "original_forms": set(),
+                    "first_seen": int(time.time()),
+                    "last_seen": int(time.time()),
+                    "users": set()
+                }
+
+            entry = incorrect_answers[normalized_answer]
+            entry["count"] += 1
+            entry["original_forms"].add(original_answer)
+            entry["last_seen"] = int(time.time())
+            entry["users"].add(f"{user_id}:{guild_id}")
+
+            # Convert sets back to lists for JSON serialization
+            entry["original_forms"] = list(entry["original_forms"])
+            entry["users"] = list(entry["users"])
+
     async def get_question_config(self, guild: discord.Guild):
         """Get question config, checking guild first, then global fallback."""
         # First check guild config (takes precedence)
@@ -264,6 +288,9 @@ class WebVerifier(commands.Cog):
                 normalized_response == self.normalize_answer(answer)
                 for answer in question["answers"]
             ):
+                # Log the incorrect answer
+                await self.log_incorrect_answer(member.id, guild.id, msg.content, normalized_response)
+
                 if kick_on_fail and guild.me.guild_permissions.kick_members:
                     await member.send(
                         "Incorrect answer. You have been removed from the server."
@@ -765,6 +792,117 @@ This link will expire in 30 minutes."""
 
         await self.config.verification_url.set(url)
         await ctx.send(f"The verification URL has been set to: {url}")
+
+    @verifyconfig.command()
+    async def incorrectanswers(self, ctx: commands.Context, limit: int = 20):
+        """View logged incorrect answers grouped by normalized form with statistics.
+
+        Args:
+            limit: Maximum number of entries to show (default: 20)
+        """
+        incorrect_answers = await self.config.incorrect_answers()
+
+        if not incorrect_answers:
+            await ctx.send("No incorrect answers have been logged yet.")
+            return
+
+        # Sort entries by count (descending) then by last seen (most recent first)
+        sorted_entries = sorted(
+            incorrect_answers.items(),
+            key=lambda x: (x[1]["count"], x[1]["last_seen"]),
+            reverse=True
+        )
+
+        # Limit the results
+        if limit > 0:
+            sorted_entries = sorted_entries[:limit]
+
+        embed = discord.Embed(
+            title=f"Incorrect Answers Log (Top {len(sorted_entries)})",
+            description=f"Total unique incorrect answers: {len(incorrect_answers)}",
+            color=0xff6b6b
+        )
+
+        current_time = int(time.time())
+
+        for normalized_answer, data in sorted_entries:
+            count = data["count"]
+            original_forms = data.get("original_forms", [normalized_answer])
+            first_seen = data["first_seen"]
+            last_seen = data["last_seen"]
+            unique_users = len(data.get("users", []))
+
+            # Calculate time since last seen
+            time_diff = current_time - last_seen
+            if time_diff < 3600:  # Less than 1 hour
+                time_str = f"{time_diff // 60}m ago"
+            elif time_diff < 86400:  # Less than 1 day
+                time_str = f"{time_diff // 3600}h ago"
+            else:  # 1 day or more
+                time_str = f"{time_diff // 86400}d ago"
+
+            # Show up to 3 original forms, truncate if more
+            forms_display = ", ".join(f'"{form}"' for form in original_forms[:3])
+            if len(original_forms) > 3:
+                forms_display += f" (+{len(original_forms) - 3} more)"
+
+            field_name = f"#{count} attempts • {unique_users} users • {time_str}"
+            field_value = f"**Forms:** {forms_display}\n**Normalized:** `{normalized_answer}`"
+
+            # Truncate field value if too long
+            if len(field_value) > 1024:
+                field_value = field_value[:1020] + "..."
+
+            embed.add_field(name=field_name, value=field_value, inline=False)
+
+        # Add summary statistics
+        total_attempts = sum(data["count"] for data in incorrect_answers.values())
+        embed.set_footer(text=f"Total incorrect attempts: {total_attempts}")
+
+        await ctx.send(embed=embed)
+
+    @verifyconfig.command()
+    async def clearincorrectanswers(self, ctx: commands.Context):
+        """Clear all logged incorrect answers (requires confirmation)."""
+        incorrect_answers = await self.config.incorrect_answers()
+
+        if not incorrect_answers:
+            await ctx.send("No incorrect answers to clear.")
+            return
+
+        total_entries = len(incorrect_answers)
+        total_attempts = sum(data["count"] for data in incorrect_answers.values())
+
+        # Ask for confirmation
+        confirm_msg = await ctx.send(
+            f"⚠️ This will permanently delete {total_entries} unique incorrect answers "
+            f"({total_attempts} total attempts). React with ✅ to confirm or ❌ to cancel."
+        )
+        await confirm_msg.add_reaction("✅")
+        await confirm_msg.add_reaction("❌")
+
+        def check(reaction, user):
+            return (
+                user == ctx.author and
+                reaction.message.id == confirm_msg.id and
+                str(reaction.emoji) in ["✅", "❌"]
+            )
+
+        try:
+            reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30.0)
+            await confirm_msg.delete()
+        except asyncio.TimeoutError:
+            await ctx.send("Clear operation cancelled due to timeout.")
+            await confirm_msg.delete()
+            return
+
+        if str(reaction.emoji) == "❌":
+            await ctx.send("Clear operation cancelled.")
+            return
+
+        # Clear the data
+        await self.config.incorrect_answers.set({})
+        await ctx.send(f"✅ Cleared {total_entries} unique incorrect answers ({total_attempts} total attempts).")
 
     async def red_delete_data_for_user(self, **kwargs):
         """Delete user data when requested."""
