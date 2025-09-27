@@ -476,6 +476,22 @@ This link will expire in 30 minutes."""
         await ctx.send(f"The verified role has been set to {role.name}.")
 
     @verifyset.command()
+    async def clearverifiedrole(self, ctx: commands.Context):
+        """Clear the verified role setting for this guild."""
+        current_role_id = await self.config.guild(ctx.guild).role_id()
+
+        if not current_role_id:
+            await ctx.send("No verified role is currently set for this guild.")
+            return
+
+        # Get the role name for confirmation message
+        current_role = get(ctx.guild.roles, id=current_role_id)
+        role_name = current_role.name if current_role else f"Role ID {current_role_id}"
+
+        await self.config.guild(ctx.guild).role_id.set(None)
+        await ctx.send(f"The verified role ({role_name}) has been cleared. No role will be granted upon verification until a new one is set.")
+
+    @verifyset.command()
     async def question(self, ctx: commands.Context, question_text: str, *answers: str):
         """Set the verification question for this guild (overrides global question)."""
         question_data = {"question": question_text, "answers": list(answers)}

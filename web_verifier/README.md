@@ -40,6 +40,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 
 - `[p]verifyset`: Parent command for all verification settings.
 - `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon verification.
+- `[p]verifyset clearverifiedrole`: Clears the verified role setting for this guild.
 - `[p]verifyset question "Question" answer1 answer2`: Sets a guild-specific verification question (overrides global question).
 - `[p]verifyset clearquestion`: Clears the guild question to use global fallback (only works if global question exists).
 - `[p]verifyset status`: Shows current verification configuration and warnings.
