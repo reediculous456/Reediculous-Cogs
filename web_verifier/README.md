@@ -40,9 +40,10 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 
 - `[p]verifyset`: Parent command for all verification settings.
 - `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon verification.
-- `[p]verifyset question "Question" answer1 answer2`: Sets the verification question and accepted answers.
+- `[p]verifyset question "Question" answer1 answer2`: Sets a guild-specific verification question (overrides global question).
+- `[p]verifyset clearquestion`: Clears the guild question to use global fallback (only works if global question exists).
 - `[p]verifyset status`: Shows current verification configuration and warnings.
-- `[p]verifyset showquestion`: Shows the current verification question (deleted after 60 seconds).
+- `[p]verifyset showquestion`: Shows the currently active verification question with source indication (deleted after 60 seconds).
 - `[p]verifyset setkickonfail true/false`: Enables or disables kicking users on verification failure.
 - `[p]verifyset enabled true/false`: Enables or disables the verification process.
 - `[p]verifyset checkuser @User`: Checks global verification status of a specific user.
@@ -52,6 +53,9 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyconfig setsecret <secret>`: Sets the JWT secret (minimum 32 characters, global setting).
 - `[p]verifyconfig setport <port>`: Sets the port for the verification web server (global setting).
 - `[p]verifyconfig url <URL>`: Sets the base URL for the external verification service (global setting).
+- `[p]verifyconfig question "Question" answer1 answer2`: Sets a global verification question (fallback for guilds without custom questions).
+- `[p]verifyconfig clearquestion`: Clears the global verification question.
+- `[p]verifyconfig showquestion`: Shows the global verification question specifically.
 - `[p]verifyconfig addmember @User <member_id>`: Manually verify a user globally with a specific member ID.
 - `[p]verifyconfig viewmembers`: Lists all globally verified members and their member IDs.
 - `[p]verifyconfig removemember @User`: Removes a user's global verification record.
@@ -88,15 +92,35 @@ Set a secure JWT secret (minimum 32 characters):
 
 This secret will be used to sign and verify JWT tokens. Note that this is a bot-wide setting that requires bot owner permissions.
 
-### Setting the Verification Question
+### Setting Verification Questions
 
-Set the question and accepted answers:
+You can set questions at two levels with a priority system:
+
+**Global Question (fallback for all guilds):**
 
 ```text
-[p]verifyset question "What is your member ID?" 12345 67890 98765
+[p]verifyconfig question "What is your member ID?" 12345 67890 98765
 ```
 
-Replace with your desired question and valid answers.
+**Guild-Specific Question (overrides global):**
+
+```text
+[p]verifyset question "What is your guild-specific member ID?" 11111 22222 33333
+```
+
+**Clear Guild Question (revert to global):**
+
+```text
+[p]verifyset clearquestion
+```
+
+**Priority System:**
+
+1. If a guild has its own question set → Guild question is used
+2. If no guild question is set → Global question is used as fallback
+3. If neither is set → Verification will fail with an error message
+
+Replace with your desired questions and valid answers.
 
 ### Setting the Verification URL
 
@@ -180,10 +204,16 @@ View current verification settings and any configuration warnings:
    [p]verifyconfig setsecret my_very_secure_jwt_secret_key_123456789
    ```
 
-3. **Set Question and Answers**:
+3. **Set Global Question (fallback)**:
 
    ```text
-   [p]verifyset question "What is the meaning of life?" 42 "forty-two" "forty two"
+   [p]verifyconfig question "What is the meaning of life?" 42 "forty-two" "forty two"
+   ```
+
+   **Optional - Set Guild-Specific Question (overrides global)**:
+
+   ```text
+   [p]verifyset question "What is this guild's special code?" SECRET123 secret123
    ```
 
 4. **Set Verification URL**:
