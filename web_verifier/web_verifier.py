@@ -29,6 +29,7 @@ class WebVerifier(commands.Cog):
             "verification_enabled": False,
         }
         default_global = {
+            "question": {},
             "verification_url": "",
             "jwt_secret": None,
             "port": 8080,  # Default port for the web server
@@ -209,9 +210,24 @@ class WebVerifier(commands.Cog):
             return prefixes[0]
         return prefixes
 
-    def normalize_answer(self, answer: str):
-        # Remove non-alphanumeric characters and convert to lowercase
+    def normalize_answer(self, answer):
+        """Normalize the answer by removing spaces and converting to lowercase."""
         return re.sub(r"[^a-zA-Z0-9]", "", answer).lower()
+
+    async def get_question_config(self, guild: discord.Guild):
+        """Get question config, checking guild first, then global fallback."""
+        # First check guild config (takes precedence)
+        guild_question = await self.config.guild(guild).question()
+        if guild_question and guild_question.get("question"):
+            return guild_question, "guild"
+
+        # Fallback to global config
+        global_question = await self.config.question()
+        if global_question and global_question.get("question"):
+            return global_question, "global"
+
+        # No question set anywhere
+        return None, None
 
     async def ask_question_and_generate_url(
         self, member: discord.Member, guild: discord.Guild, channel: discord.TextChannel
@@ -219,11 +235,11 @@ class WebVerifier(commands.Cog):
         """Ask the static question and generate verification URL."""
         prefix = await self.get_prefix(member)
         config = await self.config.guild(guild).all()
-        question = config["question"]
+        question, _ = await self.get_question_config(guild)
         kick_on_fail = config["kick_on_fail"]
         verification_url = await self.config.verification_url()
 
-        if not question or not question.get("question"):
+        if not question:
             try:
                 await member.send(
                     "The admins of this server have enabled verification questions but have not set any questions. Please contact them to have this corrected."
@@ -434,10 +450,29 @@ This link will expire in 30 minutes."""
 
     @verifyset.command()
     async def question(self, ctx: commands.Context, question_text: str, *answers: str):
-        """Set the verification question."""
+        """Set the verification question for this guild (overrides global question)."""
         question_data = {"question": question_text, "answers": list(answers)}
         await self.config.guild(ctx.guild).question.set(question_data)
-        await ctx.send("Question added.")
+        await ctx.send("Guild question added. This will override any global question for this server.")
+
+    @verifyset.command()
+    async def clearquestion(self, ctx: commands.Context):
+        """Clear the guild verification question (only works if global question exists)."""
+        # Check if there's a global question to fall back to
+        global_question = await self.config.question()
+        if not global_question or not global_question.get("question"):
+            await ctx.send("❌ Cannot clear guild question: No global question is set to fall back to. Set a global question first with `verifyconfig globalquestion`.")
+            return
+
+        # Check if there's actually a guild question to clear
+        guild_question = await self.config.guild(ctx.guild).question()
+        if not guild_question or not guild_question.get("question"):
+            await ctx.send("ℹ️ This guild doesn't have a custom question set. The global question is already being used.")
+            return
+
+        # Clear the guild question
+        await self.config.guild(ctx.guild).question.set({})
+        await ctx.send("✅ Guild question cleared. This server will now use the global question as fallback.")
 
     @verifyset.command()
     async def status(self, ctx: commands.Context):
@@ -447,7 +482,13 @@ This link will expire in 30 minutes."""
         role = get(ctx.guild.roles, id=config["role_id"]) if config["role_id"] else None
         role_name = role.name if role else "Not set"
 
-        question_text = config["question"].get("question", "Not set") if config["question"] else "Not set"
+        # Get current question with source
+        question, question_source = await self.get_question_config(ctx.guild)
+        if question:
+            source_text = "🌐 Global" if question_source == "global" else f"🏠 Guild ({ctx.guild.name})"
+            question_text = f"{question['question']} ({source_text})"
+        else:
+            question_text = "Not set"
 
         embed = discord.Embed(title="Verification Settings", color=0x00ff00)
         embed.add_field(name="Enabled", value=config["verification_enabled"], inline=True)
@@ -471,8 +512,8 @@ This link will expire in 30 minutes."""
         warnings = []
         if not jwt_secret or len(jwt_secret) < 32:
             warnings.append("⚠️ JWT secret not configured or too short")
-        if not config["question"]:
-            warnings.append("⚠️ Verification question not set")
+        if not question:
+            warnings.append("⚠️ Verification question not set (neither global nor guild-specific)")
         if not config["role_id"]:
             warnings.append("⚠️ Verified role not set")
         if not verification_url:
@@ -486,13 +527,14 @@ This link will expire in 30 minutes."""
     @verifyset.command()
     async def showquestion(self, ctx: commands.Context):
         """Show the verification question."""
-        question = await self.config.guild(ctx.guild).question()
-        if not question or not question.get("question"):
+        question, source = await self.get_question_config(ctx.guild)
+        if not question:
             await ctx.send("No verification question set.")
             return
 
         question_text = f'Q: "{question["question"]}" A: {", ".join(question["answers"])}'
-        await ctx.send(f"Verification Question:\n{question_text}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
+        source_text = "🌐 Global" if source == "global" else f"🏠 Guild ({ctx.guild.name})"
+        await ctx.send(f"**Verification Question** ({source_text}):\n{question_text}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
 
     @verifyset.command()
     async def setkickonfail(self, ctx: commands.Context, kick_on_fail: bool):
@@ -556,6 +598,30 @@ This link will expire in 30 minutes."""
     async def verifyconfig(self, ctx: commands.Context) -> None:
         """Verifier settings and commands."""
         pass
+
+    @verifyconfig.command("question")
+    async def globalquestion(self, ctx: commands.Context, question_text: str, *answers: str):
+        """Set the global verification question (fallback when no guild question is set)."""
+        question_data = {"question": question_text, "answers": list(answers)}
+        await self.config.question.set(question_data)
+        await ctx.send("Global question added. This will be used as fallback for guilds that don't have their own question set.")
+
+    @verifyconfig.command("clearquestion")
+    async def clearglobalquestion(self, ctx: commands.Context):
+        """Clear the global verification question."""
+        await self.config.question.set({})
+        await ctx.send("Global question cleared. Guilds without their own questions will have no verification question set.")
+
+    @verifyconfig.command("showquestion")
+    async def showglobalquestion(self, ctx: commands.Context):
+        """Show the global verification question."""
+        global_question = await self.config.question()
+        if not global_question or not global_question.get("question"):
+            await ctx.send("No global verification question is currently set.")
+            return
+
+        question_text = f'Q: "{global_question["question"]}" A: {", ".join(global_question["answers"])}'
+        await ctx.send(f"**Global Verification Question** 🌐:\n{question_text}\n\nThis post will be deleted in 60 seconds.", delete_after=60)
 
     @verifyconfig.command()
     async def addmember(self, ctx: commands.Context, user: discord.Member, member_id: str):
