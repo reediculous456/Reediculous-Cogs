@@ -27,6 +27,7 @@ class WebVerifier(commands.Cog):
             "role_id": None,
             "kick_on_fail": False,
             "verification_enabled": False,
+            "verify_on_join": True,
         }
         default_global = {
             "question": {},
@@ -347,18 +348,17 @@ This link will expire in 30 minutes."""
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         """Trigger verification process when a member joins if enabled."""
-        verification_enabled = await self.config.guild(
-            member.guild
-        ).verification_enabled()
+        verification_enabled = await self.config.guild(member.guild).verification_enabled()
+        verify_on_join = await self.config.guild(member.guild).verify_on_join()
         if verification_enabled:
             verified_members = await self.config.verified_members()
             if str(member.id) in verified_members:
                 self.bot.dispatch('member_verified', member.guild, member, verified_members[str(member.id)])
                 return
-
-            await self.ask_question_and_generate_url(
-                member, member.guild, member.guild.system_channel
-            )
+            if verify_on_join:
+                await self.ask_question_and_generate_url(
+                    member, member.guild, member.guild.system_channel
+                )
 
     @commands.guild_only()
     @commands.command()
@@ -537,6 +537,7 @@ This link will expire in 30 minutes."""
         embed.add_field(name="Enabled", value=config["verification_enabled"], inline=True)
         embed.add_field(name="Verified Role", value=role_name, inline=True)
         embed.add_field(name="Kick on Fail", value=config["kick_on_fail"], inline=True)
+        embed.add_field(name="Verify on Join", value=config["verify_on_join"], inline=True)
 
         verification_url = await self.config.verification_url()
         embed.add_field(name="Verification URL", value=verification_url or "Not set", inline=False)
@@ -585,6 +586,13 @@ This link will expire in 30 minutes."""
         await self.config.guild(ctx.guild).kick_on_fail.set(kick_on_fail)
         status = "enabled" if kick_on_fail else "disabled"
         await ctx.send(f"Kicking on verification failure has been {status}.")
+
+    @verifyset.command()
+    async def verifyonjoin(self, ctx: commands.Context, verify_on_join: bool):
+        """Enable or disable auto-start of verification on join."""
+        await self.config.guild(ctx.guild).verify_on_join.set(verify_on_join)
+        status = "enabled" if verify_on_join else "disabled"
+        await ctx.send(f"Verification on join has been {status}.")
 
     @verifyset.command()
     async def enabled(self, ctx: commands.Context, verification_enabled: bool):
