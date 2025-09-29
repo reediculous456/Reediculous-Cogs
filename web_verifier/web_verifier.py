@@ -736,6 +736,45 @@ This link will expire in 30 minutes."""
         await ctx.send(status_msg + ".")
 
     @verifyconfig.command()
+    async def checkuser(self, ctx: commands.Context, user: discord.Member):
+        """Check if a user is globally verified and show their member ID."""
+        verified_members = await self.config.verified_members()
+        user_id = str(user.id)
+
+        if user_id in verified_members:
+            member_id = verified_members[user_id]
+            role_id = await self.config.guild(ctx.guild).role_id()
+
+            if role_id:
+                role = get(ctx.guild.roles, id=role_id)
+                has_role = role in user.roles if role else False
+
+            # Check how many servers this user has verified role in
+            verified_servers = []
+            for guild in self.bot.guilds:
+                guild_member = guild.get_member(user.id)
+                if not guild_member:
+                    continue
+
+                verification_enabled = await self.config.guild(guild).verification_enabled()
+                if not verification_enabled:
+                    continue
+
+                verified_servers.append(guild.name)
+
+            embed = discord.Embed(title="User Verification Status", color=0x00ff00)
+            embed.add_field(name="User", value=user.mention, inline=True)
+            embed.add_field(name="Member ID", value=member_id, inline=True)
+            if role_id:
+                embed.add_field(name="Has Role (This Server)", value=has_role, inline=True)
+            embed.add_field(name="Verified Servers", value=f"{len(verified_servers)} servers" if verified_servers else "None", inline=True)
+            if verified_servers:
+                embed.add_field(name="Server Names", value=", ".join(verified_servers), inline=False)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f"{user.display_name} is not verified.")
+
+    @verifyconfig.command()
     async def viewmembers(self, ctx: commands.Context):
         """View all verified members and their member IDs."""
         verified_members = await self.config.verified_members()
