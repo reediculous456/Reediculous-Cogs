@@ -599,7 +599,7 @@ This link will expire in 30 minutes."""
         """Enable or disable the verification process."""
         await self.config.guild(ctx.guild).verification_enabled.set(verification_enabled)
         status = "enabled" if verification_enabled else "disabled"
-        
+
         # If enabling verification, check for already verified members and grant roles
         if verification_enabled:
             role_id = await self.config.guild(ctx.guild).role_id()
@@ -608,7 +608,7 @@ This link will expire in 30 minutes."""
                 if role:
                     verified_members = await self.config.verified_members()
                     granted_count = 0
-                    
+
                     for member in ctx.guild.members:
                         user_id = str(member.id)
                         if user_id in verified_members and role not in member.roles:
@@ -619,7 +619,7 @@ This link will expire in 30 minutes."""
                                 granted_count += 1
                             except discord.Forbidden:
                                 log.warning(f"Could not grant verified role to {member.display_name} in {ctx.guild.name} - missing permissions")
-                    
+
                     if granted_count > 0:
                         await ctx.send(f"Verification has been {status}. Granted verified role to {granted_count} already verified member(s).")
                     else:
