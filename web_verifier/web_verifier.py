@@ -360,6 +360,41 @@ This link will expire in 30 minutes."""
                     member, member.guild, member.guild.system_channel
                 )
 
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        """Monitor role changes and remove verified role from unauthorized users."""
+        # Only check if verification is enabled for this guild
+        verification_enabled = await self.config.guild(after.guild).verification_enabled()
+        if not verification_enabled:
+            return
+
+        # Get the configured verified role for this guild
+        role_id = await self.config.guild(after.guild).role_id()
+        if not role_id:
+            return
+
+        verified_role = get(after.guild.roles, id=role_id)
+        if not verified_role:
+            return
+
+        # Check if the verified role was added to this member
+        before_has_role = verified_role in before.roles
+        after_has_role = verified_role in after.roles
+
+        if not before_has_role and after_has_role:
+            # Verified role was just added - check if user is authorized
+            verified_members = await self.config.verified_members()
+
+            if str(after.id) not in verified_members:
+                # User is not in verified members list - remove the role
+                try:
+                    await after.remove_roles(verified_role, reason="User not in verified members list")
+                    log.warning(f"Removed verified role from unauthorized user {after.display_name} ({after.id}) in {after.guild.name}")
+                except discord.Forbidden:
+                    log.error(f"Missing permissions to remove verified role from {after.display_name} in {after.guild.name}")
+                except discord.HTTPException as e:
+                    log.error(f"Failed to remove verified role from {after.display_name} in {after.guild.name}: {e}")
+
     @commands.guild_only()
     @commands.command()
     async def verify(self, ctx: commands.Context):
