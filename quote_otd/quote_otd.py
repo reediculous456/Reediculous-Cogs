@@ -59,7 +59,8 @@ class QuoteOfTheDay(commands.Cog):
             attachment = ctx.message.attachments[0]
             if attachment.filename.endswith(".txt"):
                 content = (await attachment.read()).decode('utf-8')
-                new_quotes = [q.strip() for q in content.split('|')]
+                # Split on newlines and ignore empty lines
+                new_quotes = [q.strip() for q in content.splitlines() if q.strip()]
             else:
                 await ctx.send("Please upload a valid .txt file.")
                 return
