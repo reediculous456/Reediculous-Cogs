@@ -2,6 +2,8 @@ from redbot.core import commands, Config
 from redbot.core.bot import Red
 import discord
 import random
+import asyncio
+import io
 from datetime import datetime, time, timezone
 from discord.ext import tasks
 import pytz
@@ -75,7 +77,7 @@ class QuoteOfTheDay(commands.Cog):
     # TODO: use a menu to display quotes
     @quoteotd.command()
     async def list(self, ctx: commands.Context, page: commands.positive_int = 1):
-        """List quotes in pages of 15 quotes."""
+        """List quotes in pages of 15 quotes, navigable via emoji reactions by guild admins."""
         quotes = await self.config.guild(ctx.guild).quotes()
         if not quotes:
             await ctx.send("No quotes available.")
@@ -87,15 +89,162 @@ class QuoteOfTheDay(commands.Cog):
             await ctx.send(f"Invalid page number. Please choose a page between 1 and {pages}.")
             return
 
-        start = (page - 1) * quotes_per_page
-        end = start + quotes_per_page
-        quote_list = quotes[start:end]
-        embed = discord.Embed(title=f"Quotes (Page {page}/{pages})")
-        embed.color = await ctx.embed_color()
-        for idx, quote in enumerate(quote_list, start=start + 1):
-            embed.add_field(name=f"Quote {idx}", value=discord.utils.escape_markdown(quote), inline=False)
+        # Build embeds for each page
+        embeds = []
+        for p in range(1, pages + 1):
+            start = (p - 1) * quotes_per_page
+            end = start + quotes_per_page
+            embed = discord.Embed(title=f"Quotes (Page {p}/{pages})")
+            embed.color = await ctx.embed_color()
+            for idx, quote in enumerate(quotes[start:end], start=start + 1):
+                embed.add_field(name=f"Quote {idx}", value=discord.utils.escape_markdown(quote), inline=False)
+            embeds.append(embed)
 
-        await ctx.send(embed=embed)
+        current = max(1, min(page, pages)) - 1
+        message = await ctx.send(embed=embeds[current])
+
+        # If only one page, nothing to paginate
+        if pages <= 1:
+            return
+
+        prev_emoji = "◀️"
+        next_emoji = "▶️"
+        stop_emoji = "⏹️"
+        emojis = (prev_emoji, next_emoji, stop_emoji)
+
+        for e in emojis:
+            try:
+                await message.add_reaction(e)
+            except Exception:
+                pass
+
+        def check(reaction: discord.Reaction, user: discord.User):
+            if user.bot:
+                return False
+            if reaction.message.id != message.id:
+                return False
+            if str(reaction.emoji) not in emojis:
+                return False
+            member = ctx.guild.get_member(user.id)
+            if not member:
+                return False
+            # Only allow guild admins/managers to page
+            if member.guild_permissions.administrator or member.guild_permissions.manage_guild:
+                return True
+            return False
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for("reaction_add", timeout=120.0, check=check)
+            except asyncio.TimeoutError:
+                try:
+                    await message.clear_reactions()
+                except Exception:
+                    pass
+                break
+            else:
+                emoji = str(reaction.emoji)
+                if emoji == prev_emoji:
+                    current = (current - 1) % pages
+                    try:
+                        await message.edit(embed=embeds[current])
+                    except Exception:
+                        pass
+                elif emoji == next_emoji:
+                    current = (current + 1) % pages
+                    try:
+                        await message.edit(embed=embeds[current])
+                    except Exception:
+                        pass
+                elif emoji == stop_emoji:
+                    try:
+                        await message.clear_reactions()
+                    except Exception:
+                        pass
+                    break
+
+                # try to remove the user's reaction to keep UI clean
+                try:
+                    await message.remove_reaction(reaction.emoji, user)
+                except Exception:
+                    pass
+
+    @quoteotd.command()
+    async def export(self, ctx: commands.Context, filename: str = "quotes.txt"):
+        """Export all current quotes to a text file and send it in the channel."""
+        quotes = await self.config.guild(ctx.guild).quotes()
+        if not quotes:
+            await ctx.send("No quotes available to export.")
+            return
+
+        content = "\n".join(quotes)
+        bio = io.BytesIO(content.encode("utf-8"))
+        bio.seek(0)
+        try:
+            await ctx.send("Here are the exported quotes:", file=discord.File(bio, filename=filename))
+        except Exception:
+            await ctx.send("Failed to send the file. Ensure the bot has permission to upload files.")
+
+    @quoteotd.command()
+    async def clear(self, ctx: commands.Context):
+        """Clear all current quotes — requires reaction confirmation from an admin."""
+        quotes = await self.config.guild(ctx.guild).quotes()
+        if not quotes:
+            await ctx.send("There are no quotes to clear.")
+            return
+
+        confirm_msg = await ctx.send(
+            "This will permanently delete all quotes. React ✅ to confirm or ❌ to cancel. (30s)"
+        )
+
+        confirm_emoji = "✅"
+        cancel_emoji = "❌"
+
+        try:
+            await confirm_msg.add_reaction(confirm_emoji)
+            await confirm_msg.add_reaction(cancel_emoji)
+        except Exception:
+            pass
+
+        def check(reaction: discord.Reaction, user: discord.User):
+            if user.bot:
+                return False
+            if reaction.message.id != confirm_msg.id:
+                return False
+            if str(reaction.emoji) not in (confirm_emoji, cancel_emoji):
+                return False
+            member = ctx.guild.get_member(user.id)
+            if not member:
+                return False
+            # Only allow guild admins/managers to confirm
+            return member.guild_permissions.administrator or member.guild_permissions.manage_guild
+
+        try:
+            reaction, user = await self.bot.wait_for("reaction_add", timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            try:
+                await confirm_msg.clear_reactions()
+            except Exception:
+                pass
+            await ctx.send("Clear cancelled (timeout).")
+            return
+
+        if str(reaction.emoji) == cancel_emoji:
+            try:
+                await confirm_msg.clear_reactions()
+            except Exception:
+                pass
+            await ctx.send("Clear cancelled.")
+            return
+
+        # Confirmed
+        await self.config.guild(ctx.guild).quotes.set([])
+        await self.config.guild(ctx.guild).posted_quotes.set([])
+        try:
+            await confirm_msg.clear_reactions()
+        except Exception:
+            pass
+        await ctx.send("All quotes have been cleared.")
 
     @quoteotd.command()
     async def setchannel(self, ctx: commands.Context, channel: discord.TextChannel):
