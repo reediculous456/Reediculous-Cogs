@@ -58,9 +58,25 @@ class QuoteOfTheDay(commands.Cog):
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
             if attachment.filename.endswith(".txt"):
-                content = (await attachment.read()).decode('utf-8')
-                # Split on newlines and ignore empty lines
-                new_quotes = [q.strip() for q in content.splitlines() if q.strip()]
+                raw = await attachment.read()
+                # decode with utf-8-sig to strip possible BOMs
+                try:
+                    content = raw.decode('utf-8-sig')
+                except Exception:
+                    content = raw.decode('utf-8', errors='replace')
+
+                # Prefer real newlines
+                if any(nl in content for nl in ('\r', '\n')):
+                    new_quotes = [q.strip() for q in content.splitlines() if q.strip()]
+                # Some files may contain literal '\n' sequences instead of actual newlines
+                elif '\\n' in content:
+                    new_quotes = [q.strip() for q in content.split('\\n') if q.strip()]
+                # Fallback to pipe-separated if present
+                elif '|' in content:
+                    new_quotes = [q.strip() for q in content.split('|') if q.strip()]
+                else:
+                    # Single-line file
+                    new_quotes = [content.strip()] if content.strip() else []
             else:
                 await ctx.send("Please upload a valid .txt file.")
                 return
@@ -75,7 +91,6 @@ class QuoteOfTheDay(commands.Cog):
 
         await ctx.send(f"Added {len(new_quotes)} quotes.")
 
-    # TODO: use a menu to display quotes
     @quoteotd.command()
     async def list(self, ctx: commands.Context, page: commands.positive_int = 1):
         """List quotes in pages of 15 quotes, navigable via emoji reactions by guild admins."""
@@ -98,7 +113,11 @@ class QuoteOfTheDay(commands.Cog):
             embed = discord.Embed(title=f"Quotes (Page {p}/{pages})")
             embed.color = await ctx.embed_color()
             for idx, quote in enumerate(quotes[start:end], start=start + 1):
-                embed.add_field(name=f"Quote {idx}", value=discord.utils.escape_markdown(quote), inline=False)
+                # Discord embed field values must be <= 1024 characters
+                raw = discord.utils.escape_markdown(quote)
+                if len(raw) > 1024:
+                    raw = raw[:1021] + "..."
+                embed.add_field(name=f"Quote {idx}", value=raw, inline=False)
             embeds.append(embed)
 
         current = max(1, min(page, pages)) - 1
