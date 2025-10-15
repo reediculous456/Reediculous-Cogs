@@ -666,8 +666,8 @@ This link will expire in 30 minutes."""
         else:
             await ctx.send(f"Verification has been {status}.")
 
-    @verifyset.command()
-    async def checkuser(self, ctx: commands.Context, user: discord.Member):
+    @verifyset.command(name="checkuser")
+    async def verifyset_checkuser(self, ctx: commands.Context, user: discord.Member):
         """Check if a user is globally verified and show their member ID."""
         verified_members = await self.config.verified_members()
         user_id = str(user.id)
@@ -808,8 +808,8 @@ This link will expire in 30 minutes."""
 
         await ctx.send(status_msg + ".")
 
-    @verifyconfig.command()
-    async def checkuser(self, ctx: commands.Context, user: discord.Member):
+    @verifyconfig.command(name="checkuser")
+    async def verifyconfig_checkuser(self, ctx: commands.Context, user: discord.Member):
         """Check if a user is globally verified and show their member ID."""
         verified_members = await self.config.verified_members()
         user_id = str(user.id)
