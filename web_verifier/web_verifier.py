@@ -770,7 +770,7 @@ This link will expire in 30 minutes."""
         await ctx.send(f"{user.name} has been manually verified with member ID: {member_id}.")
 
     @verifyconfig.command()
-    async def removemember(self, ctx: commands.Context, user: discord.Member):
+    async def removemember(self, ctx: commands.Context, user: discord.User):
         """Remove a member's global verification record and roles from all servers."""
         verified_members = await self.config.verified_members()
         if str(user.id) not in verified_members:
