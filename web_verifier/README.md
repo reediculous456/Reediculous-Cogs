@@ -45,6 +45,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyset verifiedrole @RoleName`: Sets the role to be granted upon verification
 - `[p]verifyset clearverifiedrole`: Clears the verified role setting for this guild
 - `[p]verifyset question "Question" answer1 answer2`: Sets a guild-specific verification question (overrides global question)
+- `[p]verifyset addanswers answer1 answer2`: Adds additional answers to the existing guild-specific verification question
 - `[p]verifyset clearquestion`: Clears the guild question to use global fallback (only works if global question exists)
 - `[p]verifyset status`: Shows current verification configuration and warnings
 - `[p]verifyset showquestion`: Shows the currently active verification question with source indication (deleted after 60 seconds)
@@ -59,6 +60,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyconfig setport <port>`: Sets the port for the verification web server (global setting, requires bot restart)
 - `[p]verifyconfig url <URL>`: Sets the base URL for the external verification service (global setting)
 - `[p]verifyconfig question "Question" answer1 answer2`: Sets a global verification question (fallback for guilds without custom questions)
+- `[p]verifyconfig addanswers answer1 answer2`: Adds additional answers to the existing global verification question
 - `[p]verifyconfig clearquestion`: Clears the global verification question
 - `[p]verifyconfig showquestion`: Shows the global verification question specifically
 - `[p]verifyconfig addmember @User <member_id>`: Manually verify a user globally with a specific member ID
@@ -121,6 +123,29 @@ You can set questions at two levels with a priority system:
 ```text
 [p]verifyset clearquestion
 ```
+
+**Add Answers to Existing Question:**
+
+You can add additional acceptable answers to an existing question without recreating it:
+
+**Guild-Specific:**
+
+```text
+[p]verifyset addanswers "new answer" "another answer"
+```
+
+**Global:**
+
+```text
+[p]verifyconfig addanswers "new global answer" "another global answer"
+```
+
+The `addanswers` command will:
+
+- Check for duplicate answers (case-insensitive, normalized)
+- Skip any duplicates and notify you
+- Show what was added successfully
+- Display the total number of answers after the operation
 
 **Priority System:**
 
