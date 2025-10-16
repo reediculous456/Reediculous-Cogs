@@ -534,6 +534,53 @@ This link will expire in 30 minutes."""
         await ctx.send("Guild question added. This will override any global question for this server.")
 
     @verifyset.command()
+    async def addanswers(self, ctx: commands.Context, *answers: str):
+        """Add additional answers to the guild verification question.
+        
+        Args:
+            answers: One or more answers to add to the existing question.
+        """
+        if not answers:
+            await ctx.send("❌ Please provide at least one answer to add.")
+            return
+        
+        guild_question = await self.config.guild(ctx.guild).question()
+        
+        if not guild_question or not guild_question.get("question"):
+            await ctx.send("❌ This guild doesn't have a custom question set. Set one first with `verifyset question`.")
+            return
+        
+        # Add new answers to existing ones
+        existing_answers = guild_question.get("answers", [])
+        new_answers = list(answers)
+        
+        # Check for duplicates (case-insensitive)
+        normalized_existing = [self.normalize_answer(ans) for ans in existing_answers]
+        duplicates = []
+        added = []
+        
+        for ans in new_answers:
+            if self.normalize_answer(ans) in normalized_existing:
+                duplicates.append(ans)
+            else:
+                existing_answers.append(ans)
+                added.append(ans)
+        
+        # Update the question with new answers
+        guild_question["answers"] = existing_answers
+        await self.config.guild(ctx.guild).question.set(guild_question)
+        
+        # Build response message
+        response = []
+        if added:
+            response.append(f"✅ Added {len(added)} answer(s): {', '.join(f'`{a}`' for a in added)}")
+        if duplicates:
+            response.append(f"⚠️ Skipped {len(duplicates)} duplicate(s): {', '.join(f'`{d}`' for d in duplicates)}")
+        
+        response.append(f"\n**Total answers now:** {len(existing_answers)}")
+        await ctx.send("\n".join(response))
+
+    @verifyset.command()
     async def clearquestion(self, ctx: commands.Context):
         """Clear the guild verification question (only works if global question exists)."""
         # Check if there's a global question to fall back to
@@ -721,6 +768,53 @@ This link will expire in 30 minutes."""
         question_data = {"question": question_text, "answers": list(answers)}
         await self.config.question.set(question_data)
         await ctx.send("Global question added. This will be used as fallback for guilds that don't have their own question set.")
+
+    @verifyconfig.command("addanswers")
+    async def addglobalanswers(self, ctx: commands.Context, *answers: str):
+        """Add additional answers to the global verification question.
+        
+        Args:
+            answers: One or more answers to add to the existing global question.
+        """
+        if not answers:
+            await ctx.send("❌ Please provide at least one answer to add.")
+            return
+        
+        global_question = await self.config.question()
+        
+        if not global_question or not global_question.get("question"):
+            await ctx.send("❌ No global question is currently set. Set one first with `verifyconfig question`.")
+            return
+        
+        # Add new answers to existing ones
+        existing_answers = global_question.get("answers", [])
+        new_answers = list(answers)
+        
+        # Check for duplicates (case-insensitive)
+        normalized_existing = [self.normalize_answer(ans) for ans in existing_answers]
+        duplicates = []
+        added = []
+        
+        for ans in new_answers:
+            if self.normalize_answer(ans) in normalized_existing:
+                duplicates.append(ans)
+            else:
+                existing_answers.append(ans)
+                added.append(ans)
+        
+        # Update the question with new answers
+        global_question["answers"] = existing_answers
+        await self.config.question.set(global_question)
+        
+        # Build response message
+        response = []
+        if added:
+            response.append(f"✅ Added {len(added)} answer(s) to global question: {', '.join(f'`{a}`' for a in added)}")
+        if duplicates:
+            response.append(f"⚠️ Skipped {len(duplicates)} duplicate(s): {', '.join(f'`{d}`' for d in duplicates)}")
+        
+        response.append(f"\n**Total answers now:** {len(existing_answers)}")
+        await ctx.send("\n".join(response))
 
     @verifyconfig.command("clearquestion")
     async def clearglobalquestion(self, ctx: commands.Context):
