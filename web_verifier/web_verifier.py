@@ -230,11 +230,11 @@ class WebVerifier(commands.Cog):
                 }
 
             entry = incorrect_answers[normalized_answer]
-            
+
             # Work with sets for uniqueness
             original_forms_set = set(entry["original_forms"])
             users_set = set(entry["users"])
-            
+
             entry["count"] += 1
             original_forms_set.add(original_answer)
             entry["last_seen"] = int(time.time())
