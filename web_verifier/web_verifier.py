@@ -218,31 +218,40 @@ class WebVerifier(commands.Cog):
 
     async def log_incorrect_answer(self, user_id: int, guild_id: int, original_answer: str, normalized_answer: str):
         """Log an incorrect answer with normalized grouping and timestamp."""
-        async with self.config.incorrect_answers() as incorrect_answers:
-            # Use normalized answer as the key for grouping
-            if normalized_answer not in incorrect_answers:
-                incorrect_answers[normalized_answer] = {
-                    "count": 0,
-                    "original_forms": [],
-                    "first_seen": int(time.time()),
-                    "last_seen": int(time.time()),
-                    "users": []
-                }
+        try:
+            async with self.config.incorrect_answers() as incorrect_answers:
+                # Use normalized answer as the key for grouping
+                if normalized_answer not in incorrect_answers:
+                    incorrect_answers[normalized_answer] = {
+                        "count": 0,
+                        "original_forms": [],
+                        "first_seen": int(time.time()),
+                        "last_seen": int(time.time()),
+                        "users": []
+                    }
 
-            entry = incorrect_answers[normalized_answer]
+                entry = incorrect_answers[normalized_answer]
 
-            # Work with sets for uniqueness
-            original_forms_set = set(entry["original_forms"])
-            users_set = set(entry["users"])
+                # Convert to list if stored as set (data migration from older versions)
+                if isinstance(entry.get("original_forms"), set):
+                    entry["original_forms"] = list(entry["original_forms"])
+                if isinstance(entry.get("users"), set):
+                    entry["users"] = list(entry["users"])
 
-            entry["count"] += 1
-            original_forms_set.add(original_answer)
-            entry["last_seen"] = int(time.time())
-            users_set.add(f"{user_id}:{guild_id}")
+                # Work with sets for uniqueness
+                original_forms_set = set(entry.get("original_forms", []))
+                users_set = set(entry.get("users", []))
 
-            # Store as lists
-            entry["original_forms"] = list(original_forms_set)
-            entry["users"] = list(users_set)
+                entry["count"] += 1
+                original_forms_set.add(original_answer)
+                entry["last_seen"] = int(time.time())
+                users_set.add(f"{user_id}:{guild_id}")
+
+                # Store as lists
+                entry["original_forms"] = list(original_forms_set)
+                entry["users"] = list(users_set)
+        except Exception as e:
+            log.error(f"Error logging incorrect answer: {e}", exc_info=True)
 
     async def get_question_config(self, guild: discord.Guild):
         """Get question config, checking guild first, then global fallback."""
