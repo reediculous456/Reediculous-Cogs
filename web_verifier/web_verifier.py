@@ -223,21 +223,26 @@ class WebVerifier(commands.Cog):
             if normalized_answer not in incorrect_answers:
                 incorrect_answers[normalized_answer] = {
                     "count": 0,
-                    "original_forms": set(),
+                    "original_forms": [],
                     "first_seen": int(time.time()),
                     "last_seen": int(time.time()),
-                    "users": set()
+                    "users": []
                 }
 
             entry = incorrect_answers[normalized_answer]
+            
+            # Work with sets for uniqueness
+            original_forms_set = set(entry["original_forms"])
+            users_set = set(entry["users"])
+            
             entry["count"] += 1
-            entry["original_forms"].add(original_answer)
+            original_forms_set.add(original_answer)
             entry["last_seen"] = int(time.time())
-            entry["users"].add(f"{user_id}:{guild_id}")
+            users_set.add(f"{user_id}:{guild_id}")
 
-            # Convert sets back to lists for JSON serialization
-            entry["original_forms"] = list(entry["original_forms"])
-            entry["users"] = list(entry["users"])
+            # Store as lists
+            entry["original_forms"] = list(original_forms_set)
+            entry["users"] = list(users_set)
 
     async def get_question_config(self, guild: discord.Guild):
         """Get question config, checking guild first, then global fallback."""
