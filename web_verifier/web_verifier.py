@@ -36,6 +36,7 @@ class WebVerifier(commands.Cog):
             "port": 8080,  # Default port for the web server
             "verified_members": {},  # Store user_id -> member_id mappings (now global)
             "incorrect_answers": {},  # Store normalized incorrect answers with counts and timestamps
+            "temp_member_seed": 100000000,
         }
         self.config.register_guild(**default_guild)
         self.config.register_global(**default_global)
@@ -269,7 +270,7 @@ class WebVerifier(commands.Cog):
         return None, None
 
     async def ask_question_and_generate_url(
-        self, member: discord.Member, guild: discord.Guild, channel: discord.TextChannel
+        self, member: discord.Member, guild: discord.Guild, channel: discord.TextChannel, skip_question=False
     ):
         """Ask the static question and generate verification URL."""
         prefix = await self.get_prefix(member)
@@ -291,31 +292,32 @@ class WebVerifier(commands.Cog):
             return m.author == member and isinstance(m.channel, discord.DMChannel)
 
         try:
-            await member.send(
-                "Welcome! Please answer the following question correctly to gain access to the server. You have 90 seconds to answer."
-            )
-            await member.send(f"**{question['question']}**")
+            if not skip_question:
+                await member.send(
+                    "Welcome! Please answer the following question correctly to gain access to the server. You have 90 seconds to answer."
+                )
+                await member.send(f"**{question['question']}**")
 
-            # Wait for the user's answer
-            msg = await self.bot.wait_for("message", check=check, timeout=90.0)
-            normalized_response = self.normalize_answer(msg.content)
-            if not any(
-                normalized_response == self.normalize_answer(answer)
-                for answer in question["answers"]
-            ):
-                # Log the incorrect answer
-                await self.log_incorrect_answer(member.id, guild.id, msg.content, normalized_response)
+                # Wait for the user's answer
+                msg = await self.bot.wait_for("message", check=check, timeout=90.0)
+                normalized_response = self.normalize_answer(msg.content)
+                if not any(
+                    normalized_response == self.normalize_answer(answer)
+                    for answer in question["answers"]
+                ):
+                    # Log the incorrect answer
+                    await self.log_incorrect_answer(member.id, guild.id, msg.content, normalized_response)
 
-                if kick_on_fail and guild.me.guild_permissions.kick_members:
-                    await member.send(
-                        "Incorrect answer. You have been removed from the server."
-                    )
-                    await guild.kick(member)
-                else:
-                    await member.send(
-                        "Incorrect answer. Please contact an admin if you believe this is a mistake."
-                    )
-                return
+                    if kick_on_fail and guild.me.guild_permissions.kick_members:
+                        await member.send(
+                            "Incorrect answer. You have been removed from the server."
+                        )
+                        await guild.kick(member)
+                    else:
+                        await member.send(
+                            "Incorrect answer. Please contact an admin if you believe this is a mistake."
+                        )
+                    return
 
             # Only generate JWT token if answer is correct
             jwt_token = await self.generate_verification_jwt(member, guild)
@@ -324,7 +326,7 @@ class WebVerifier(commands.Cog):
             verification_link = f"{verification_url}?jwt={jwt_token}"
 
             # Send the verification URL to the user
-            message = f"""Correct! Now visit this link to complete verification:
+            message = f"""Visit this link to complete verification:
 {verification_link}
 
 This link will expire in 30 minutes."""
@@ -421,8 +423,22 @@ This link will expire in 30 minutes."""
         member = ctx.author
         verified_members = await self.config.verified_members()
 
+        # Check if user is already globally verified
         if str(member.id) in verified_members:
-            await self.complete_verification(ctx.guild, member, verified_members[str(member.id)])
+            stored_member_id = verified_members[str(member.id)]
+
+            # If stored_member_id is numeric and above the temp_member_seed, skip the question
+            temp_seed = await self.config.temp_member_seed()
+
+            try:
+                if temp_seed is not None and stored_member_id is not None and int(stored_member_id) > int(temp_seed):
+                    await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel, skip_question=True)
+            except Exception:
+                # If parsing fails, fall back to the default behavior
+                pass
+
+            # Default behavior for already verified users
+            await self.complete_verification(ctx.guild, member, stored_member_id)
             await ctx.send("You are already verified.")
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
@@ -1018,6 +1034,21 @@ This link will expire in 30 minutes."""
 
         await self.config.port.set(port)
         await ctx.send(f"✅ Verification web server port has been set to {port}. Please restart the bot for the change to take effect.")
+
+    @verifyconfig.command()
+    async def settempseed(self, ctx: commands.Context, seed: int = 100000000):
+        """Set the numeric `temp_member_seed` global threshold.
+
+        Members with a Discord ID greater than this value will skip the question
+        and receive the verification link directly when they run `verify`.
+        Default value is 100000000.
+        """
+        if seed < 0:
+            await ctx.send("❌ Seed must be a non-negative integer.")
+            return
+
+        await self.config.temp_member_seed.set(seed)
+        await ctx.send(f"✅ `temp_member_seed` set to {seed}.")
 
     @verifyconfig.command()
     async def url(self, ctx: commands.Context, url: str):

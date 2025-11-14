@@ -69,6 +69,7 @@ The Web Verifier cog for Redbot provides a JWT-based verification system that in
 - `[p]verifyconfig checkuser @User`: Checks global verification status of a specific user (owner version with more details)
 - `[p]verifyconfig incorrectanswers [limit]`: View logged incorrect answers grouped by normalized form with statistics (default limit: 20)
 - `[p]verifyconfig clearincorrectanswers`: Clear all logged incorrect answers (requires confirmation)
+- `[p]verifyconfig settempseed <seed>`: Set the global numeric `temp_member_seed` threshold (default: `100000000`). Verified members with a member ID greater than this value will skip the verification question and receive the verification link directly when they run `[p]verify` again, allowing them to re-link their account without answering questions.
 
 ## Usage
 
@@ -188,6 +189,8 @@ Users can manually trigger the verification process:
 ```
 
 This command will only work if the user is not already verified and verification is enabled.
+
+Note: There is a global `temp_member_seed` (default `100000000`). If a user's Discord ID is numerically greater than this seed, the cog will skip asking the verification question and will instead generate a JWT and send the verification URL directly (DM preferred; posted in-channel if DMs are blocked). Use `[p]verifyconfig settempseed <seed>` to change this behavior.
 
 ### User Self-Removal (Unverify)
 
