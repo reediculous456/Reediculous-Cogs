@@ -445,7 +445,7 @@ This link will expire in 30 minutes."""
 
             # Default behavior for already verified users
             await self.complete_verification(ctx.guild, member, stored_member_id)
-            await ctx.send("You are already verified.")
+            await ctx.send("You are already verified.", delete_after=60)
         else:
             await self.ask_question_and_generate_url(member, ctx.guild, ctx.channel)
 
