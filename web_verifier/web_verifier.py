@@ -423,6 +423,12 @@ This link will expire in 30 minutes."""
         member = ctx.author
         verified_members = await self.config.verified_members()
 
+        # Delete the user's verify command message
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+            pass  # Ignore if we can't delete the message
+
         # Check if user is already globally verified
         if str(member.id) in verified_members:
             stored_member_id = verified_members[str(member.id)]
