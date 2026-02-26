@@ -534,7 +534,7 @@ This link will expire in 30 minutes."""
         await ctx.send(status_msg + ".")
 
     @commands.group()
-    @commands.admin()
+    @commands.admin_or_permissions(administrator=True)
     @commands.guild_only()
     async def verifyset(self, ctx: commands.Context) -> None:
         """Sets verification module settings."""
